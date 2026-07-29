@@ -35,7 +35,7 @@ usersRouter.get("/", async (req, res) => {
 usersRouter.post("/", async (req, res) => {
   try {
     const { email, name, role = "viewer", active = true } = req.body;
-    if (!email) res.status(400).json({ error: "email required" });
+    if (!email) return void res.status(400).json({ error: "email required" });
 
     const { data: authUser, error: authErr } = await supabaseAdmin.auth.admin.createUser({
       email,

@@ -4,8 +4,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "wouter";
 import { Search as SearchIcon, ArrowLeft } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useDebounce } from "@/lib/use-debounce"; // Will implement inline if missing
-
 function useDebounceHook<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
   useEffect(() => {
@@ -48,7 +46,7 @@ export default function Search() {
               <Link key={`${result.type}-${result.id}`} href={
                 result.type === 'property' ? `/properties/${result.id}` :
                 result.type === 'region' ? `/regions` :
-                result.type === 'property-type' ? `/property-types` :
+                result.type === 'property_type' ? `/property-types` :
                 '/'
               }>
                 <Card className="hover:border-primary/50 transition-colors cursor-pointer group">

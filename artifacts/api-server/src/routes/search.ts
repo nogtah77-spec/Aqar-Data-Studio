@@ -8,7 +8,7 @@ searchRouter.get("/", async (req, res) => {
     const { q, types = "properties,regions,property_types", limit = "10" } = req.query as Record<string, string>;
 
     if (!q || q.trim().length < 2) {
-      res.json({ results: [], query: q ?? "", total: 0 });
+      return void res.json({ results: [], query: q ?? "", total: 0 });
     }
 
     const searchQuery = q.trim();

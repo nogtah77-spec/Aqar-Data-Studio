@@ -86,7 +86,7 @@ propertiesRouter.get("/", async (req, res) => {
 propertiesRouter.post("/", async (req, res) => {
   try {
     const body = req.body;
-    if (!body.code?.trim()) res.status(400).json({ error: "code is required" });
+    if (!body.code?.trim()) return void res.status(400).json({ error: "code is required" });
 
     const id = generateId();
     const row = toDbRow({ ...body, id, created_at: new Date().toISOString() });
@@ -161,7 +161,7 @@ propertiesRouter.post("/export", async (req, res) => {
 propertiesRouter.post("/bulk", async (req, res) => {
   try {
     const { operation, ids, updates } = req.body;
-    if (!ids?.length) res.status(400).json({ error: "ids array required" });
+    if (!ids?.length) return void res.status(400).json({ error: "ids array required" });
 
     let affected = 0;
     const errors: string[] = [];
@@ -213,7 +213,7 @@ propertiesRouter.post("/bulk", async (req, res) => {
       if (error) throw error;
       affected = count ?? ids.length;
     } else {
-      res.status(400).json({ error: `Unknown operation: ${operation}` });
+      return void res.status(400).json({ error: `Unknown operation: ${operation}` });
     }
 
     res.json({ success: true, affected, errors });
@@ -227,7 +227,7 @@ propertiesRouter.post("/bulk", async (req, res) => {
 propertiesRouter.post("/parse-text", async (req, res) => {
   try {
     const { text } = req.body;
-    if (!text) res.status(400).json({ error: "text is required" });
+    if (!text) return void res.status(400).json({ error: "text is required" });
     const parsed = parsePropertyText(text);
     res.json(parsed);
   } catch (err: any) {
@@ -244,7 +244,7 @@ propertiesRouter.get("/:id", async (req, res) => {
       .eq("id", req.params.id)
       .single();
 
-    if (error || !data) res.status(404).json({ error: "Property not found" });
+    if (error || !data) return void res.status(404).json({ error: "Property not found" });
     res.json(mapRow(data));
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -332,7 +332,7 @@ propertiesRouter.post("/:id/duplicate", async (req, res) => {
       .eq("id", req.params.id)
       .single();
 
-    if (fetchErr || !original) res.status(404).json({ error: "Property not found" });
+    if (fetchErr || !original) return void res.status(404).json({ error: "Property not found" });
 
     const newId = generateId();
     const newCode = "ALM-" + Math.floor(10000 + Math.random() * 90000);

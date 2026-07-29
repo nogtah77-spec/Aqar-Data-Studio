@@ -220,7 +220,7 @@ export async function importPropertiesEngine(
         status: normalizeStatus(item.status),
         // ──────────────────────────────────────────────────────
         view: item.view ?? "",
-        type_id: item.typeId ?? "apartment",
+        type_id: item.typeId || null,
         region_id: item.regionId ?? "",
         featured: item.featured ?? false,
         agent_type: item.agentType ?? "direct",

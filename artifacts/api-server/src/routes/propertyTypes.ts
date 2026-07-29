@@ -39,7 +39,7 @@ propertyTypesRouter.get("/", async (req, res) => {
 propertyTypesRouter.post("/", async (req, res) => {
   try {
     const { id, name, active = true } = req.body;
-    if (!id || !name) res.status(400).json({ error: "id and name required" });
+    if (!id || !name) return void res.status(400).json({ error: "id and name required" });
 
     const { data, error } = await supabaseAdmin
       .from("property_types")
