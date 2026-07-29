@@ -1,9 +1,73 @@
 import { Link } from "wouter";
-import { Search, Plus, Moon, Sun, Keyboard } from "lucide-react";
+import { Search, Plus, Moon, Sun, Keyboard, LogOut, User, Shield, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MobileSidebar } from "./Sidebar";
 import { useTheme } from "@/lib/theme";
+import { useAuth } from "@/contexts/AuthContext";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+const ROLE_LABELS: Record<string, { label: string; icon: typeof Shield }> = {
+  admin: { label: "مدير", icon: Shield },
+  agent: { label: "وسيط", icon: User },
+  viewer: { label: "مشاهد", icon: Eye },
+};
+
+function UserMenu() {
+  const { user, profile, signOut } = useAuth();
+
+  const displayName = profile?.name ?? user?.email?.split("@")[0] ?? "مستخدم";
+  const initials = displayName.slice(0, 2).toUpperCase();
+  const role = profile?.role ?? "viewer";
+  const roleInfo = ROLE_LABELS[role] ?? ROLE_LABELS.viewer;
+  const RoleIcon = roleInfo.icon;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          className="w-8 h-8 rounded-full bg-[#2F4156] text-white flex items-center justify-center font-bold text-xs shadow-sm hover:opacity-90 transition-opacity select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label="قائمة المستخدم"
+        >
+          {initials}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" sideOffset={8} className="w-52">
+        {/* User info */}
+        <DropdownMenuLabel className="pb-1">
+          <p className="text-sm font-semibold truncate">{displayName}</p>
+          <p className="text-xs text-muted-foreground font-normal truncate">{user?.email}</p>
+        </DropdownMenuLabel>
+
+        {/* Role badge */}
+        <div className="px-2 pb-1">
+          <span className="inline-flex items-center gap-1 text-xs bg-muted rounded px-1.5 py-0.5 text-muted-foreground">
+            <RoleIcon size={10} />
+            {roleInfo.label}
+          </span>
+        </div>
+
+        <DropdownMenuSeparator />
+
+        {/* Sign out */}
+        <DropdownMenuItem
+          onClick={signOut}
+          className="text-destructive focus:text-destructive focus:bg-destructive/10 gap-2 cursor-pointer"
+        >
+          <LogOut size={14} />
+          تسجيل الخروج
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 export function Topbar() {
   const { theme, toggle } = useTheme();
@@ -87,10 +151,8 @@ export function Topbar() {
           </Link>
         </Button>
 
-        {/* User avatar */}
-        <div className="w-8 h-8 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center font-bold text-sm shadow-sm cursor-pointer hover:opacity-90 transition-opacity select-none">
-          AD
-        </div>
+        {/* User menu */}
+        <UserMenu />
       </div>
     </header>
   );

@@ -130,7 +130,7 @@ export default function Dashboard() {
 
   const growthPct =
     stats?.lastMonthAdded && stats.lastMonthAdded > 0
-      ? Math.round(((stats.thisMonthAdded - stats.lastMonthAdded) / stats.lastMonthAdded) * 100)
+      ? Math.round((((stats.thisMonthAdded ?? 0) - stats.lastMonthAdded) / stats.lastMonthAdded) * 100)
       : null;
 
   return (
