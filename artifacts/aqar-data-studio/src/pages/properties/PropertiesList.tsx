@@ -1,164 +1,531 @@
-import { useState } from "react";
-import { useListProperties } from "@workspace/api-client-react";
-import { Link } from "wouter";
-import { 
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
-} from "@/components/ui/table";
+import { useState, useCallback } from "react";
+import { useListProperties, useListRegions, useListPropertyTypes } from "@workspace/api-client-react";
+import { Link, useLocation } from "wouter";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatPrice, formatArea } from "@/lib/utils";
-import { Search, Plus, Filter, MoreHorizontal, FileDown } from "lucide-react";
+import {
+  Search, Plus, FileDown, Filter, MoreHorizontal, Trash2,
+  Archive, CheckCircle2, Star, X, ChevronLeft, ChevronRight,
+  LayoutGrid, LayoutList, Building2, MapPin,
+} from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+
+// ── Status badge helper ───────────────────────────────────────────────────────
+
+const STATUS_VARIANT: Record<string, any> = {
+  active: "success", draft: "draft", sold: "destructive", rented: "info",
+};
+const STATUS_LABEL: Record<string, string> = {
+  active: "نشط", draft: "مسودة", sold: "مباع", rented: "مؤجر",
+};
+const CAT_LABEL: Record<string, string> = {
+  sale: "بيع", rent: "إيجار", investment: "استثمار",
+};
+
+// ── Bulk operation ────────────────────────────────────────────────────────────
+
+async function runBulk(ids: string[], operation: string, updates?: Record<string, any>) {
+  const res = await fetch("/api/properties/bulk", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ids, operation, updates }),
+  });
+  if (!res.ok) throw new Error("فشلت العملية الجماعية");
+  return res.json();
+}
+
+// ── Property card (mobile) ────────────────────────────────────────────────────
+
+function PropertyCard({ p, selected, onSelect }: { p: any; selected: boolean; onSelect: () => void }) {
+  const [, setLocation] = useLocation();
+  return (
+    <div
+      className={cn(
+        "bg-card border rounded-xl p-4 space-y-2 transition-colors",
+        selected ? "border-primary ring-2 ring-primary/20" : "border-border"
+      )}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Checkbox checked={selected} onCheckedChange={onSelect} />
+          <span className="font-mono text-xs text-muted-foreground">{p.code}</span>
+          {p.featured && <Star size={12} className="text-yellow-500 fill-yellow-500" />}
+        </div>
+        <Badge variant={STATUS_VARIANT[p.status] ?? "default"} className="text-[10px] shrink-0">
+          {STATUS_LABEL[p.status] ?? p.status}
+        </Badge>
+      </div>
+
+      <div
+        className="font-semibold text-sm leading-tight cursor-pointer hover:text-primary transition-colors"
+        onClick={() => setLocation(`/properties/${p.id}`)}
+      >
+        {p.title || p.code}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+        <span className="font-semibold text-foreground">{formatPrice(p.price)}</span>
+        {p.area > 0 && <span>{formatArea(p.area)}</span>}
+        {p.beds > 0 && <span>{p.beds} غرف</span>}
+        {p.regionName && (
+          <span className="flex items-center gap-1"><MapPin size={10} />{p.regionName}</span>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between pt-1">
+        <span className="text-xs text-muted-foreground">
+          {CAT_LABEL[p.category] ?? p.category}
+          {p.typeName && ` · ${p.typeName}`}
+        </span>
+        <Button
+          asChild
+          variant="ghost"
+          size="sm"
+          className="h-7 text-xs px-2"
+        >
+          <Link href={`/properties/${p.id}`}>عرض</Link>
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function PropertiesList() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const [filterRegion, setFilterRegion] = useState("__all");
+  const [filterType, setFilterType] = useState("__all");
+  const [filterCategory, setFilterCategory] = useState("__all");
+  const [filterStatus, setFilterStatus] = useState("__all");
+  const [showFilters, setShowFilters] = useState(false);
+  const [view, setView] = useState<"table" | "cards">("table");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [, setLocation] = useLocation();
   const limit = 20;
 
-  const { data, isLoading } = useListProperties(
-    { page, limit, search },
-    { query: { queryKey: ['properties', { page, limit, search }] } }
-  );
+  const params = {
+    page,
+    limit,
+    ...(search && { search }),
+    ...(filterRegion !== "__all" && { regionId: filterRegion }),
+    ...(filterType !== "__all" && { typeId: filterType }),
+    ...(filterCategory !== "__all" && { category: filterCategory }),
+    ...(filterStatus !== "__all" && { status: filterStatus }),
+  };
+
+  const { data, isLoading, refetch } = useListProperties(params, {
+    query: { queryKey: ["properties", params] },
+  });
+  const { data: regions = [] } = useListRegions({ query: { queryKey: ["regions"] } });
+  const { data: types = [] } = useListPropertyTypes({ query: { queryKey: ["property-types"] } });
+
+  const properties = data?.data ?? [];
+  const hasFilters =
+    filterRegion !== "__all" || filterType !== "__all" ||
+    filterCategory !== "__all" || filterStatus !== "__all";
+  const activeFilterCount = [filterRegion, filterType, filterCategory, filterStatus]
+    .filter((v) => v !== "__all").length;
+
+  const clearFilters = () => {
+    setFilterRegion("__all");
+    setFilterType("__all");
+    setFilterCategory("__all");
+    setFilterStatus("__all");
+    setPage(1);
+  };
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleAll = () => {
+    if (selected.size === properties.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(properties.map((p: any) => p.id)));
+    }
+  };
+
+  const handleBulk = async (operation: string) => {
+    const ids = Array.from(selected);
+    if (!ids.length) return;
+    if (operation === "delete" && !confirm(`حذف ${ids.length} عقار؟ لا يمكن التراجع.`)) return;
+    setBulkLoading(true);
+    try {
+      await runBulk(ids, operation);
+      setSelected(new Set());
+      refetch();
+    } catch {
+    } finally {
+      setBulkLoading(false);
+    }
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">العقارات (Properties)</h2>
-          <p className="text-muted-foreground text-sm">إدارة كافة العقارات المدرجة في المنصة.</p>
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight">العقارات</h2>
+          <p className="text-muted-foreground text-sm">
+            {data?.total !== undefined ? `${data.total.toLocaleString("ar-EG")} عقار` : "إدارة جميع العقارات"}
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" className="gap-2">
-            <FileDown size={16} />
-            تصدير
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" size="sm" className="gap-1.5" asChild>
+            <Link href="/export"><FileDown size={15} /> تصدير</Link>
           </Button>
-          <Button asChild className="gap-2">
-            <Link href="/properties/new">
-              <Plus size={16} />
-              عقار جديد
-            </Link>
+          <Button asChild size="sm" className="gap-1.5">
+            <Link href="/properties/new"><Plus size={15} /> عقار جديد</Link>
           </Button>
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-center gap-2 bg-card p-2 rounded-lg border shadow-sm">
+      {/* Search + filter bar */}
+      <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
           <Search className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input 
-            placeholder="بحث بالكود، العنوان، أو الوصف..." 
+          <Input
+            placeholder="بحث بالكود أو العنوان…"
             value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            className="ps-9 border-none shadow-none focus-visible:ring-0 bg-transparent"
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            className="ps-9"
           />
         </div>
-        <div className="h-6 w-px bg-border hidden sm:block" />
-        <Button variant="ghost" className="gap-2 shrink-0">
-          <Filter size={16} />
-          تصفية
-        </Button>
+
+        <div className="flex gap-2">
+          <Button
+            variant={showFilters ? "default" : "outline"}
+            size="sm"
+            className="gap-1.5 relative shrink-0"
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            <Filter size={15} />
+            <span>فلاتر</span>
+            {activeFilterCount > 0 && (
+              <span className="absolute -top-1.5 -end-1.5 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[9px] flex items-center justify-center font-bold">
+                {activeFilterCount}
+              </span>
+            )}
+          </Button>
+
+          {/* View toggle */}
+          <div className="flex rounded-lg border overflow-hidden">
+            <button
+              onClick={() => setView("table")}
+              className={cn("px-2.5 py-1.5 transition-colors", view === "table" ? "bg-primary text-primary-foreground" : "hover:bg-muted")}
+              title="جدول"
+            >
+              <LayoutList size={15} />
+            </button>
+            <button
+              onClick={() => setView("cards")}
+              className={cn("px-2.5 py-1.5 transition-colors", view === "cards" ? "bg-primary text-primary-foreground" : "hover:bg-muted")}
+              title="بطاقات"
+            >
+              <LayoutGrid size={15} />
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div className="rounded-xl border border-card-border bg-card overflow-hidden shadow-sm">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[100px]">الكود</TableHead>
-              <TableHead className="w-[250px]">العنوان</TableHead>
-              <TableHead>السعر</TableHead>
-              <TableHead>المساحة</TableHead>
-              <TableHead>النوع / الفئة</TableHead>
-              <TableHead>الحالة</TableHead>
-              <TableHead className="w-[80px]"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell><div className="h-4 bg-muted rounded w-16 animate-pulse" /></TableCell>
-                  <TableCell><div className="h-4 bg-muted rounded w-48 animate-pulse" /></TableCell>
-                  <TableCell><div className="h-4 bg-muted rounded w-24 animate-pulse" /></TableCell>
-                  <TableCell><div className="h-4 bg-muted rounded w-16 animate-pulse" /></TableCell>
-                  <TableCell><div className="h-4 bg-muted rounded w-20 animate-pulse" /></TableCell>
-                  <TableCell><div className="h-4 bg-muted rounded w-16 animate-pulse" /></TableCell>
-                  <TableCell></TableCell>
-                </TableRow>
-              ))
-            ) : data?.data?.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
-                  لا توجد عقارات مطابقة للبحث.
-                </TableCell>
-              </TableRow>
-            ) : (
-              data?.data?.map((property) => (
-                <TableRow key={property.id} className="group">
-                  <TableCell className="font-mono text-xs">{property.code}</TableCell>
-                  <TableCell className="font-medium truncate max-w-[250px]" title={property.title}>
-                    <Link href={`/properties/${property.id}`} className="hover:underline text-foreground">
-                      {property.title}
-                    </Link>
-                  </TableCell>
-                  <TableCell>{formatPrice(property.price)}</TableCell>
-                  <TableCell>{formatArea(property.area)}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-col gap-1 text-xs">
-                      <span>{property.typeName || '-'}</span>
-                      <span className="text-muted-foreground">{property.category || '-'}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge 
-                      variant={
-                        property.status === 'active' ? 'success' : 
-                        property.status === 'draft' ? 'draft' : 
-                        property.status === 'sold' ? 'destructive' : 
-                        property.status === 'rented' ? 'info' : 'default'
-                      }
-                      className="uppercase text-[10px]"
-                    >
-                      {property.status || 'draft'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-end">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <MoreHorizontal size={16} />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-        {data && data.totalPages > 1 && (
-          <div className="p-4 border-t flex items-center justify-between text-sm text-muted-foreground bg-muted/10">
-            <span>
-              عرض {((page - 1) * limit) + 1} إلى {Math.min(page * limit, data.total)} من {data.total}
-            </span>
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
-              >
-                السابق
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setPage(p => Math.min(data.totalPages, p + 1))}
-                disabled={page === data.totalPages}
-              >
-                التالي
-              </Button>
+      {/* Expandable filters */}
+      {showFilters && (
+        <div className="bg-muted/30 border border-border/50 rounded-xl p-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground font-medium">المنطقة</label>
+              <Select value={filterRegion} onValueChange={(v) => { setFilterRegion(v); setPage(1); }}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all">الكل</SelectItem>
+                  {(regions as any[]).map((r) => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground font-medium">النوع</label>
+              <Select value={filterType} onValueChange={(v) => { setFilterType(v); setPage(1); }}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all">الكل</SelectItem>
+                  {(types as any[]).map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground font-medium">الفئة</label>
+              <Select value={filterCategory} onValueChange={(v) => { setFilterCategory(v); setPage(1); }}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all">الكل</SelectItem>
+                  <SelectItem value="sale">بيع</SelectItem>
+                  <SelectItem value="rent">إيجار</SelectItem>
+                  <SelectItem value="investment">استثمار</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground font-medium">الحالة</label>
+              <Select value={filterStatus} onValueChange={(v) => { setFilterStatus(v); setPage(1); }}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all">الكل</SelectItem>
+                  <SelectItem value="active">نشط</SelectItem>
+                  <SelectItem value="draft">مسودة</SelectItem>
+                  <SelectItem value="sold">مباع</SelectItem>
+                  <SelectItem value="rented">مؤجر</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
-        )}
-      </div>
+          {hasFilters && (
+            <div className="mt-3 flex justify-end">
+              <Button variant="ghost" size="sm" className="gap-1.5 text-xs h-7" onClick={clearFilters}>
+                <X size={12} /> مسح الفلاتر
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Bulk action bar */}
+      {selected.size > 0 && (
+        <div className="flex flex-wrap items-center gap-3 px-4 py-3 bg-primary/5 border border-primary/20 rounded-xl">
+          <span className="text-sm font-semibold text-primary">
+            {selected.size} محدد
+          </span>
+          <div className="flex gap-2 flex-wrap">
+            <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => handleBulk("activate")} disabled={bulkLoading}>
+              <CheckCircle2 size={12} /> تنشيط
+            </Button>
+            <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => handleBulk("archive")} disabled={bulkLoading}>
+              <Archive size={12} /> أرشفة
+            </Button>
+            <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => handleBulk("feature")} disabled={bulkLoading}>
+              <Star size={12} /> تمييز
+            </Button>
+            <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30" onClick={() => handleBulk("delete")} disabled={bulkLoading}>
+              <Trash2 size={12} /> حذف
+            </Button>
+          </div>
+          <Button size="sm" variant="ghost" className="h-7 text-xs ms-auto" onClick={() => setSelected(new Set())}>
+            إلغاء
+          </Button>
+        </div>
+      )}
+
+      {/* ── TABLE VIEW (md+) ── */}
+      {view === "table" && (
+        <div className="rounded-xl border bg-card overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30">
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={selected.size === properties.length && properties.length > 0}
+                      onCheckedChange={toggleAll}
+                    />
+                  </TableHead>
+                  <TableHead className="w-[90px]">الكود</TableHead>
+                  <TableHead>العنوان</TableHead>
+                  <TableHead className="w-[110px]">السعر</TableHead>
+                  <TableHead className="w-[80px]">المساحة</TableHead>
+                  <TableHead className="hidden lg:table-cell">المنطقة / النوع</TableHead>
+                  <TableHead className="w-[80px]">الفئة</TableHead>
+                  <TableHead className="w-[80px]">الحالة</TableHead>
+                  <TableHead className="w-10" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading
+                  ? Array.from({ length: 6 }).map((_, i) => (
+                      <TableRow key={i}>
+                        {Array.from({ length: 9 }).map((__, j) => (
+                          <TableCell key={j}>
+                            <div className="h-4 bg-muted rounded animate-pulse" />
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  : properties.length === 0
+                  ? (
+                      <TableRow>
+                        <TableCell colSpan={9} className="h-40 text-center">
+                          <div className="flex flex-col items-center gap-3 text-muted-foreground">
+                            <Building2 size={40} className="opacity-20" />
+                            <p>لا توجد عقارات مطابقة</p>
+                            {hasFilters && (
+                              <Button variant="outline" size="sm" onClick={clearFilters}>
+                                مسح الفلاتر
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  : properties.map((p: any) => (
+                      <TableRow key={p.id} className="group hover:bg-muted/20">
+                        <TableCell>
+                          <Checkbox
+                            checked={selected.has(p.id)}
+                            onCheckedChange={() => toggleSelect(p.id)}
+                          />
+                        </TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground">{p.code}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {p.featured && <Star size={11} className="text-yellow-500 fill-yellow-500 shrink-0" />}
+                            <Link
+                              href={`/properties/${p.id}`}
+                              className="font-medium hover:text-primary transition-colors truncate max-w-[200px] block"
+                              title={p.title}
+                            >
+                              {p.title || p.code}
+                            </Link>
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-semibold text-sm">{formatPrice(p.price)}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{formatArea(p.area)}</TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                          <div className="text-xs space-y-0.5">
+                            {p.regionName && (
+                              <div className="flex items-center gap-1 text-foreground/80">
+                                <MapPin size={10} className="shrink-0" />{p.regionName}
+                              </div>
+                            )}
+                            {p.typeName && <div className="text-muted-foreground">{p.typeName}</div>}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-xs text-muted-foreground">
+                            {CAT_LABEL[p.category] ?? p.category}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={STATUS_VARIANT[p.status] ?? "default"} className="text-[10px]">
+                            {STATUS_LABEL[p.status] ?? p.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <MoreHorizontal size={14} />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => setLocation(`/properties/${p.id}`)}>
+                                عرض التفاصيل
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setLocation(`/properties/${p.id}/edit`)}>
+                                تعديل
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={async () => {
+                                  if (confirm("حذف هذا العقار؟")) {
+                                    await runBulk([p.id], "delete");
+                                    refetch();
+                                  }
+                                }}
+                              >
+                                حذف
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Pagination */}
+          {data && data.totalPages > 1 && (
+            <div className="p-4 border-t bg-muted/10 flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-muted-foreground">
+              <span>
+                {((page - 1) * limit + 1).toLocaleString("ar-EG")}–
+                {Math.min(page * limit, data.total).toLocaleString("ar-EG")} من{" "}
+                {data.total.toLocaleString("ar-EG")}
+              </span>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
+                  <ChevronRight size={14} />
+                </Button>
+                <span className="font-medium px-2">
+                  {page} / {data.totalPages}
+                </span>
+                <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(data.totalPages, p + 1))} disabled={page === data.totalPages}>
+                  <ChevronLeft size={14} />
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── CARDS VIEW (all screens) ── */}
+      {view === "cards" && (
+        <div className="space-y-3">
+          {isLoading
+            ? Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="h-28 bg-muted rounded-xl animate-pulse" />
+              ))
+            : properties.length === 0
+            ? (
+                <div className="flex flex-col items-center gap-3 text-muted-foreground py-16">
+                  <Building2 size={40} className="opacity-20" />
+                  <p>لا توجد عقارات مطابقة</p>
+                </div>
+              )
+            : (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                    {properties.map((p: any) => (
+                      <PropertyCard
+                        key={p.id}
+                        p={p}
+                        selected={selected.has(p.id)}
+                        onSelect={() => toggleSelect(p.id)}
+                      />
+                    ))}
+                  </div>
+
+                  {data && data.totalPages > 1 && (
+                    <div className="flex items-center justify-center gap-3 pt-2">
+                      <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
+                        <ChevronRight size={14} />
+                      </Button>
+                      <span className="text-sm text-muted-foreground">{page} / {data.totalPages}</span>
+                      <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(data.totalPages, p + 1))} disabled={page === data.totalPages}>
+                        <ChevronLeft size={14} />
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+        </div>
+      )}
     </div>
   );
 }
