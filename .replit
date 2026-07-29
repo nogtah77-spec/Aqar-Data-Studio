@@ -62,3 +62,5 @@ channel = "stable-25_05"
 [userenv]
 
 [userenv.shared]
+SUPABASE_URL = "https://fsyvpeuzgsajdywovjsf.supabase.co"
+VITE_SUPABASE_URL = "https://fsyvpeuzgsajdywovjsf.supabase.co"

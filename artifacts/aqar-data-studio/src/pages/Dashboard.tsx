@@ -394,7 +394,7 @@ export default function Dashboard() {
         </CardHeader>
         <CardContent className="pt-4">
           <div className="space-y-4">
-            {activity?.map((entry) => (
+            {Array.isArray(activity) && activity.map((entry) => (
               <div key={entry.id} className="flex items-start gap-3 text-sm">
                 <div className="w-2 h-2 rounded-full bg-primary mt-2 shrink-0" />
                 <div className="flex-1 flex flex-col sm:flex-row sm:items-center justify-between gap-1 min-w-0">
@@ -420,7 +420,7 @@ export default function Dashboard() {
                 </div>
               </div>
             ))}
-            {(!activity || activity.length === 0) && (
+            {(!Array.isArray(activity) || activity.length === 0) && (
               <div className="text-muted-foreground py-10 text-center bg-muted/20 rounded-xl border border-dashed text-sm">
                 لا توجد نشاطات حديثة
               </div>

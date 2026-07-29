@@ -8,7 +8,45 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { ThemeProvider } from '@/lib/theme';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertTriangle } from 'lucide-react';
+import { Component, ErrorInfo, ReactNode } from 'react';
+
+// ── Error Boundary ─────────────────────────────────────────────────────────────
+
+interface ErrorBoundaryState { hasError: boolean; }
+
+class AppErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryState> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError(): ErrorBoundaryState {
+    return { hasError: true };
+  }
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error('[AppErrorBoundary]', error, info.componentStack);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 p-6 text-center" dir="rtl">
+          <AlertTriangle size={40} className="text-destructive" />
+          <h1 className="text-xl font-bold text-foreground">حدث خطأ غير متوقع</h1>
+          <p className="text-muted-foreground text-sm max-w-sm">
+            حاول تحديث الصفحة. إذا استمرت المشكلة، تواصل مع الدعم الفني.
+          </p>
+          <button
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+            onClick={() => { this.setState({ hasError: false }); window.location.href = '/'; }}
+          >
+            إعادة التحميل
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 import Login from '@/pages/Login';
 import Dashboard from '@/pages/Dashboard';
@@ -63,7 +101,11 @@ function ProtectedRouter() {
     return <Redirect to="/" />;
   }
 
-  return <AuthenticatedApp />;
+  return (
+    <AppErrorBoundary>
+      <AuthenticatedApp />
+    </AppErrorBoundary>
+  );
 }
 
 function AuthenticatedApp() {
