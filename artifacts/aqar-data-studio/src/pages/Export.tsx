@@ -10,6 +10,7 @@ import {
 import {
   Download, FileSpreadsheet, FileText, FileJson, File,
   Loader2, CheckCircle2, Filter, Columns, SlidersHorizontal,
+  Printer,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -55,6 +56,7 @@ const FORMATS = [
     desc: "ملف إكسيل متوافق مع Microsoft Excel وGoogle Sheets",
     color: "text-green-600",
     bg: "bg-green-500/10",
+    action: "download",
   },
   {
     value: "csv",
@@ -64,6 +66,7 @@ const FORMATS = [
     desc: "قيم مفصولة بفواصل — متوافق مع أي برنامج جداول",
     color: "text-blue-600",
     bg: "bg-blue-500/10",
+    action: "download",
   },
   {
     value: "json",
@@ -73,6 +76,7 @@ const FORMATS = [
     desc: "بيانات منظمة للمطورين وتكاملات API",
     color: "text-purple-600",
     bg: "bg-purple-500/10",
+    action: "download",
   },
   {
     value: "txt",
@@ -82,6 +86,17 @@ const FORMATS = [
     desc: "نص خام مفصول بمسافات للاستخدام العام",
     color: "text-amber-600",
     bg: "bg-amber-500/10",
+    action: "download",
+  },
+  {
+    value: "pdf",
+    label: "PDF / طباعة",
+    ext: ".html",
+    icon: Printer,
+    desc: "تقرير مُنسَّق للطباعة أو الحفظ كـ PDF من المتصفح",
+    color: "text-rose-600",
+    bg: "bg-rose-500/10",
+    action: "print",
   },
 ];
 
@@ -96,17 +111,17 @@ function getFilenameFromResponse(res: Response, fallback: string): string {
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function Export() {
-  const [format, setFormat]           = useState("excel");
+  const [format, setFormat]             = useState("excel");
   const [selectedCols, setSelectedCols] = useState<string[]>(DEFAULT_COLUMNS);
-  const [sortBy, setSortBy]           = useState("created_at");
-  const [sortDir, setSortDir]         = useState("desc");
+  const [sortBy, setSortBy]             = useState("created_at");
+  const [sortDir, setSortDir]           = useState("desc");
   const [filterRegion, setFilterRegion] = useState<string>("__all");
-  const [filterType, setFilterType]   = useState<string>("__all");
+  const [filterType, setFilterType]     = useState<string>("__all");
   const [filterCategory, setFilterCategory] = useState<string>("__all");
   const [filterStatus, setFilterStatus] = useState<string>("__all");
-  const [loading, setLoading]         = useState(false);
-  const [success, setSuccess]         = useState(false);
-  const [error, setError]             = useState<string | null>(null);
+  const [loading, setLoading]           = useState(false);
+  const [success, setSuccess]           = useState(false);
+  const [error, setError]               = useState<string | null>(null);
 
   const { data: regionsData } = useListRegions({ query: { queryKey: ["regions"] } });
   const { data: typesData }   = useListPropertyTypes({ query: { queryKey: ["property-types"] } });
@@ -120,31 +135,68 @@ export default function Export() {
     );
   };
 
-  const selectAll  = () => setSelectedCols(ALL_COLUMNS.map((c) => c.value));
-  const selectNone = () => setSelectedCols([]);
+  const selectAll     = () => setSelectedCols(ALL_COLUMNS.map((c) => c.value));
+  const selectNone    = () => setSelectedCols([]);
   const selectDefault = () => setSelectedCols(DEFAULT_COLUMNS);
 
+  const buildPayload = () => {
+    const filters: Record<string, string> = {};
+    if (filterRegion   !== "__all") filters.regionId = filterRegion;
+    if (filterType     !== "__all") filters.typeId   = filterType;
+    if (filterCategory !== "__all") filters.category = filterCategory;
+    if (filterStatus   !== "__all") filters.status   = filterStatus;
+    return { format, columns: selectedCols, filters, sortBy, sortDir };
+  };
+
   const handleExport = async () => {
+    const selectedFmtObj = FORMATS.find((f) => f.value === format)!;
+
+    // PDF → open in new window for print-to-PDF
+    if (selectedFmtObj.action === "print") {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch("/api/properties/export", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(buildPayload()),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ error: "فشل التصدير" }));
+          throw new Error(err.error ?? "فشل التصدير");
+        }
+        const html = await res.text();
+        const win = window.open("", "_blank");
+        if (win) {
+          win.document.open();
+          win.document.write(html.replace("autoprint=1", "autoprint=1")); // trigger auto-print
+          win.document.close();
+          // Inject autoprint after load
+          win.addEventListener("load", () => {
+            setTimeout(() => win.print(), 600);
+          });
+        } else {
+          setError("يرجى السماح بالنوافذ المنبثقة لفتح تقرير PDF");
+        }
+        setSuccess(true);
+        setTimeout(() => setSuccess(false), 4000);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // Standard file download
     setLoading(true);
     setSuccess(false);
     setError(null);
     try {
-      const filters: Record<string, string> = {};
-      if (filterRegion   !== "__all") filters.regionId = filterRegion;
-      if (filterType     !== "__all") filters.typeId   = filterType;
-      if (filterCategory !== "__all") filters.category = filterCategory;
-      if (filterStatus   !== "__all") filters.status   = filterStatus;
-
       const res = await fetch("/api/properties/export", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          format,
-          columns: selectedCols,
-          filters,
-          sortBy,
-          sortDir,
-        }),
+        body: JSON.stringify(buildPayload()),
       });
 
       if (!res.ok) {
@@ -193,7 +245,8 @@ export default function Export() {
       )}
       {success && (
         <div className="bg-green-500/10 border border-green-500/20 text-green-700 p-4 rounded-xl text-sm flex items-center gap-2">
-          <CheckCircle2 size={16} /> تم تحميل الملف بنجاح!
+          <CheckCircle2 size={16} />
+          {format === "pdf" ? "تم فتح نافذة الطباعة. استخدم «حفظ كـ PDF» من نافذة الطباعة." : "تم تحميل الملف بنجاح!"}
         </div>
       )}
 
@@ -415,13 +468,20 @@ export default function Export() {
       {/* Download button */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 rounded-2xl border bg-card">
         <div className="text-sm text-center sm:text-start">
-          <p className="font-semibold text-foreground">جاهز للتصدير</p>
+          <p className="font-semibold text-foreground">
+            {format === "pdf" ? "جاهز للطباعة / PDF" : "جاهز للتصدير"}
+          </p>
           <p className="text-muted-foreground text-xs mt-0.5">
             {selectedCols.length} عمود · تنسيق {selectedFmt.label}
             {filterRegion !== "__all" || filterType !== "__all" || filterCategory !== "__all" || filterStatus !== "__all"
               ? " · مع فلاتر مفعلة"
               : " · كل البيانات"}
           </p>
+          {format === "pdf" && (
+            <p className="text-[11px] text-muted-foreground mt-1">
+              سيفتح تقرير في نافذة جديدة → استخدم «حفظ كـ PDF» أو «طباعة»
+            </p>
+          )}
         </div>
         <Button
           size="lg"
@@ -430,7 +490,9 @@ export default function Export() {
           className="gap-2 w-full sm:w-auto min-w-[180px]"
         >
           {loading ? (
-            <><Loader2 size={18} className="animate-spin" /> جارٍ التصدير…</>
+            <><Loader2 size={18} className="animate-spin" /> جارٍ التجهيز…</>
+          ) : format === "pdf" ? (
+            <><Printer size={18} /> فتح للطباعة / PDF</>
           ) : (
             <><Download size={18} /> تصدير {selectedFmt.label}</>
           )}

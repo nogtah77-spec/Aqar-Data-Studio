@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, Building2, Upload, Download, MapPin,
-  Home, List, Users, History, Settings, Menu, X, Search,
+  Home, List, Users, History, Settings, Menu, Search,
+  GitCompare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ const navItems = [
   { href: "/",              label: "الرئيسية",       labelEn: "Dashboard",   icon: LayoutDashboard },
   { href: "/properties",    label: "العقارات",        labelEn: "Properties",  icon: Building2 },
   { href: "/search",        label: "البحث",           labelEn: "Search",      icon: Search },
+  { href: "/compare",       label: "المقارنة",        labelEn: "Compare",     icon: GitCompare },
   { href: "/import",        label: "استيراد",         labelEn: "Import",      icon: Upload },
   { href: "/export",        label: "تصدير",           labelEn: "Export",      icon: Download },
   { href: "/regions",       label: "المناطق",         labelEn: "Regions",     icon: MapPin },
@@ -79,7 +81,7 @@ export function Sidebar() {
       </nav>
       <div className="p-4 border-t border-sidebar-border shrink-0 text-xs text-muted-foreground flex items-center justify-between">
         <span>Aqar Data Studio</span>
-        <span className="font-mono">v1.0</span>
+        <span className="font-mono">v1.1</span>
       </div>
     </aside>
   );
@@ -126,7 +128,7 @@ export function MobileSidebar() {
           </nav>
           <div className="p-4 border-t border-sidebar-border text-xs text-muted-foreground flex items-center justify-between">
             <span>Aqar Data Studio</span>
-            <span className="font-mono">v1.0</span>
+            <span className="font-mono">v1.1</span>
           </div>
         </SheetContent>
       </Sheet>

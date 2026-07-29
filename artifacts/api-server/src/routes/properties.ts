@@ -146,9 +146,14 @@ propertiesRouter.post("/export", async (req, res) => {
       sortDir,
     });
 
-    res.setHeader("Content-Type", mimeType);
-    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-    res.send(buffer);
+    if (inline) {
+      res.setHeader("Content-Type", mimeType);
+      res.send(buffer);
+    } else {
+      res.setHeader("Content-Type", mimeType);
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.send(buffer);
+    }
   } catch (err: any) {
     req.log.error({ err }, "exportProperties error");
     res.status(500).json({ error: err.message });

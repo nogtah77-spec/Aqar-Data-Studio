@@ -1,14 +1,18 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { ShortcutsDialog } from '@/components/ui/shortcuts-dialog';
 import NotFound from '@/pages/not-found';
 import { Route, Switch, Router as WouterRouter } from 'wouter';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { ThemeProvider } from '@/lib/theme';
+import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 
 import Dashboard from '@/pages/Dashboard';
 import PropertiesList from '@/pages/properties/PropertiesList';
 import PropertyForm from '@/pages/properties/PropertyForm';
 import PropertyDetail from '@/pages/properties/PropertyDetail';
+import Compare from '@/pages/Compare';
 import Import from '@/pages/Import';
 import Export from '@/pages/Export';
 import Regions from '@/pages/Regions';
@@ -22,6 +26,8 @@ import Search from '@/pages/Search';
 const queryClient = new QueryClient();
 
 function Router() {
+  useKeyboardShortcuts();
+
   return (
     <AppLayout>
       <Switch>
@@ -30,6 +36,7 @@ function Router() {
         <Route path="/properties/new" component={PropertyForm} />
         <Route path="/properties/:id/edit" component={PropertyForm} />
         <Route path="/properties/:id" component={PropertyDetail} />
+        <Route path="/compare" component={Compare} />
         <Route path="/import" component={Import} />
         <Route path="/export" component={Export} />
         <Route path="/regions" component={Regions} />
@@ -47,14 +54,17 @@ function Router() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-          <Router />
-        </WouterRouter>
-        <Toaster />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+            <Router />
+          </WouterRouter>
+          <Toaster />
+          <ShortcutsDialog />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 

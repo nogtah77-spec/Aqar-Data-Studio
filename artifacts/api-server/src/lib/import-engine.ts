@@ -41,6 +41,119 @@ export interface ImportResult {
   details: Array<{ code: string; action: string; error?: string }>;
 }
 
+// ── Finishing normalization map ────────────────────────────────────────────────
+// Maps common Arabic/English finishing variants → canonical value
+
+const FINISHING_NORM: Record<string, string> = {
+  // Full finishing
+  "تشطيب كامل": "تشطيب كامل",
+  "تشطيب تام": "تشطيب كامل",
+  "مشطب": "تشطيب كامل",
+  "مشطبة": "تشطيب كامل",
+  "full finishing": "تشطيب كامل",
+  "fully finished": "تشطيب كامل",
+  "full": "تشطيب كامل",
+  "كامل": "تشطيب كامل",
+  "تام": "تشطيب كامل",
+
+  // Half finishing
+  "نصف تشطيب": "نصف تشطيب",
+  "نص تشطيب": "نصف تشطيب",
+  "نصف مشطب": "نصف تشطيب",
+  "نصف مشطبة": "نصف تشطيب",
+  "نصف": "نصف تشطيب",
+  "half finishing": "نصف تشطيب",
+  "semi finished": "نصف تشطيب",
+  "semi-finished": "نصف تشطيب",
+  "half finished": "نصف تشطيب",
+  "half": "نصف تشطيب",
+
+  // Core & shell (red brick)
+  "خرسانة": "خرسانة",
+  "هيكل": "خرسانة",
+  "عظم": "خرسانة",
+  "عضم": "خرسانة",
+  "core and shell": "خرسانة",
+  "core & shell": "خرسانة",
+  "skeleton": "خرسانة",
+  "بدون تشطيب": "خرسانة",
+
+  // Super lux
+  "سوبر لوكس": "سوبر لوكس",
+  "سوبر": "سوبر لوكس",
+  "super lux": "سوبر لوكس",
+  "super luxury": "سوبر لوكس",
+  "superlux": "سوبر لوكس",
+  "lux": "سوبر لوكس",
+  "luxury": "سوبر لوكس",
+  "فاخر": "سوبر لوكس",
+
+  // Ultra lux
+  "الترا لوكس": "الترا لوكس",
+  "الترا": "الترا لوكس",
+  "ultra lux": "الترا لوكس",
+  "ultra luxury": "الترا لوكس",
+  "ultralux": "الترا لوكس",
+};
+
+/**
+ * Normalize a finishing string to a canonical value.
+ * Returns the original string if no mapping found.
+ */
+export function normalizeFinishing(value?: string): string {
+  if (!value) return "";
+  const normalized = value.trim().toLowerCase();
+  return FINISHING_NORM[normalized] ?? FINISHING_NORM[value.trim()] ?? value.trim();
+}
+
+// ── Category normalization ─────────────────────────────────────────────────────
+
+const CATEGORY_NORM: Record<string, string> = {
+  "بيع": "sale",
+  "للبيع": "sale",
+  "sale": "sale",
+  "for sale": "sale",
+  "إيجار": "rent",
+  "للايجار": "rent",
+  "للإيجار": "rent",
+  "rent": "rent",
+  "for rent": "rent",
+  "rental": "rent",
+  "استثمار": "investment",
+  "investment": "investment",
+};
+
+export function normalizeCategory(value?: string): string {
+  if (!value) return "sale";
+  const lower = value.trim().toLowerCase();
+  return CATEGORY_NORM[lower] ?? CATEGORY_NORM[value.trim()] ?? value.trim();
+}
+
+// ── Status normalization ───────────────────────────────────────────────────────
+
+const STATUS_NORM: Record<string, string> = {
+  "نشط": "active",
+  "active": "active",
+  "متاح": "active",
+  "available": "active",
+  "مسودة": "draft",
+  "draft": "draft",
+  "مباع": "sold",
+  "sold": "sold",
+  "مبيع": "sold",
+  "مؤجر": "rented",
+  "rented": "rented",
+  "مستأجر": "rented",
+};
+
+export function normalizeStatus(value?: string): string {
+  if (!value) return "active";
+  const lower = value.trim().toLowerCase();
+  return STATUS_NORM[lower] ?? STATUS_NORM[value.trim()] ?? value.trim();
+}
+
+// ── Main import engine ────────────────────────────────────────────────────────
+
 export async function importPropertiesEngine(
   items: ImportRow[],
   mode: string = "merge",
@@ -101,12 +214,14 @@ export async function importPropertiesEngine(
         baths: item.baths ?? 0,
         floors: item.floors ?? 0,
         floor: item.floor ?? 0,
-        finishing: item.finishing ?? "",
+        // ── Normalized values ──────────────────────────────────
+        finishing: normalizeFinishing(item.finishing),
+        category: normalizeCategory(item.category),
+        status: normalizeStatus(item.status),
+        // ──────────────────────────────────────────────────────
         view: item.view ?? "",
         type_id: item.typeId ?? "apartment",
         region_id: item.regionId ?? "",
-        category: item.category ?? "sale",
-        status: item.status ?? "active",
         featured: item.featured ?? false,
         agent_type: item.agentType ?? "direct",
         unit_type: item.unitType ?? "",

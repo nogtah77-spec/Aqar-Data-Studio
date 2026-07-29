@@ -148,3 +148,56 @@ dashboardRouter.get("/activity", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// ── Price trend: properties added per month for last 6 months ──────────────────
+dashboardRouter.get("/trends", async (req, res) => {
+  try {
+    const months = parseInt((req.query.months as string) ?? "6");
+    const now = new Date();
+
+    // Build month buckets
+    const buckets: { label: string; start: string; end: string }[] = [];
+    for (let i = months - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const start = d.toISOString();
+      const end = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59).toISOString();
+      const label = d.toLocaleDateString("ar-EG", { month: "short", year: "numeric" });
+      buckets.push({ label, start, end });
+    }
+
+    // Fetch all properties created in the range
+    const { data, error } = await supabaseAdmin
+      .from("properties")
+      .select("created_at, price, region_id, regions!properties_region_id_fkey(name)")
+      .gte("created_at", buckets[0].start)
+      .lte("created_at", buckets[buckets.length - 1].end);
+
+    if (error) throw error;
+
+    // Aggregate: count and avg price per month
+    const trend = buckets.map(({ label, start, end }) => {
+      const inMonth = (data ?? []).filter((r: any) => r.created_at >= start && r.created_at <= end);
+      const count = inMonth.length;
+      const avgPrice = count > 0
+        ? Math.round(inMonth.reduce((s: number, r: any) => s + (r.price ?? 0), 0) / count)
+        : 0;
+      return { month: label, count, avgPrice };
+    });
+
+    // Top regions over the period
+    const regionMap: Record<string, { name: string; count: number }> = {};
+    (data ?? []).forEach((r: any) => {
+      const id = r.region_id ?? "unknown";
+      if (!regionMap[id]) regionMap[id] = { name: r.regions?.name ?? id, count: 0 };
+      regionMap[id].count++;
+    });
+    const topRegions = Object.values(regionMap)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    res.json({ trend, topRegions });
+  } catch (err: any) {
+    req.log.error({ err }, "getDashboardTrends error");
+    res.status(500).json({ error: err.message });
+  }
+});
