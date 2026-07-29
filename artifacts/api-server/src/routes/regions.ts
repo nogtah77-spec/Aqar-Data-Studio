@@ -40,7 +40,7 @@ regionsRouter.get("/", async (req, res) => {
 regionsRouter.post("/", async (req, res) => {
   try {
     const { id, name, active = true } = req.body;
-    if (!id || !name) return res.status(400).json({ error: "id and name required" });
+    if (!id || !name) res.status(400).json({ error: "id and name required" });
 
     const { data, error } = await supabaseAdmin
       .from("regions")

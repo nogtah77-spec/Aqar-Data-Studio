@@ -38,7 +38,7 @@ lookupOptionsRouter.post("/", async (req, res) => {
   try {
     const { category, value, label, active = true, sortOrder = 0 } = req.body;
     if (!category || !value || !label)
-      return res.status(400).json({ error: "category, value and label required" });
+      res.status(400).json({ error: "category, value and label required" });
 
     const id = generateId();
     const { data, error } = await supabaseAdmin

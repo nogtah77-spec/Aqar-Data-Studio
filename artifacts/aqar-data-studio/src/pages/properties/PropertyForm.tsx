@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useLocation } from "wouter";
 import {
   useGetProperty, useCreateProperty, useUpdateProperty,
@@ -14,10 +14,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import {
   Save, ArrowRight, Loader2, Sparkles, CheckCircle2,
-  ChevronDown, ChevronUp,
+  ChevronDown, ChevronUp, ImagePlus, X, Images,
 } from "lucide-react";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
+import { uploadPropertyImage } from "@/lib/supabase";
 
 // ── Smart text parser widget ──────────────────────────────────────────────────
 
@@ -177,6 +178,134 @@ const EMPTY_FORM = {
   regionId: "", typeId: "", finishing: "", view: "",
   subArea: "", floorText: "", floor: "", source: "", featured: false,
 };
+
+// ── Image manager (edit mode) ─────────────────────────────────────────────────
+
+function ImageManager({
+  property,
+  updateMutation,
+}: {
+  property: any;
+  updateMutation: ReturnType<typeof useUpdateProperty>;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+
+  const images: string[] = Array.isArray(property?.images) ? property.images : [];
+
+  const handleUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0 || !property?.id) return;
+    setUploading(true);
+    setUploadError("");
+    const uploaded: string[] = [];
+    try {
+      for (const file of Array.from(files)) {
+        const url = await uploadPropertyImage(property.id, file);
+        uploaded.push(url);
+      }
+      updateMutation.mutate({
+        id: property.id,
+        data: { images: [...images, ...uploaded] } as any,
+      });
+    } catch (err: any) {
+      setUploadError(err.message ?? "فشل رفع الصورة");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  const handleDelete = (url: string) => {
+    if (!property?.id) return;
+    updateMutation.mutate({
+      id: property.id,
+      data: { images: images.filter((u) => u !== url) } as any,
+    });
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-3 border-b border-border/50">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Images size={16} className="text-primary" />
+            الصور
+            {images.length > 0 && (
+              <Badge variant="secondary" className="text-xs">{images.length}</Badge>
+            )}
+          </CardTitle>
+          <div>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => handleUpload(e.target.files)}
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+            >
+              {uploading ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <ImagePlus size={14} />
+              )}
+              {uploading ? "جارٍ الرفع…" : "رفع صور"}
+            </Button>
+          </div>
+        </div>
+        {uploadError && (
+          <p className="text-xs text-destructive mt-1">{uploadError}</p>
+        )}
+      </CardHeader>
+      <CardContent className="pt-4">
+        {images.length === 0 ? (
+          <div
+            className="flex flex-col items-center justify-center py-10 border-2 border-dashed border-border rounded-lg text-muted-foreground cursor-pointer hover:border-primary/40 hover:bg-muted/20 transition-colors"
+            onClick={() => fileRef.current?.click()}
+          >
+            <ImagePlus size={32} className="mb-2 opacity-30" />
+            <p className="text-sm font-medium text-foreground">لا توجد صور</p>
+            <p className="text-xs mt-1">انقر لرفع الصور</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {images.map((url, i) => (
+              <div key={url} className="relative group aspect-video rounded-lg overflow-hidden border border-border bg-muted">
+                <img
+                  src={url}
+                  alt={`صورة ${i + 1}`}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleDelete(url)}
+                  className="absolute top-1 left-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
+                  aria-label="حذف الصورة"
+                >
+                  <X size={12} />
+                </button>
+                {i === 0 && (
+                  <span className="absolute bottom-1 right-1 text-[10px] bg-black/50 text-white px-1.5 py-0.5 rounded">
+                    رئيسية
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function PropertyForm() {
   const params = useParams();
@@ -439,6 +568,9 @@ export default function PropertyForm() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Images — edit mode only */}
+        {isEdit && <ImageManager property={property} updateMutation={updateMutation} />}
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row justify-end gap-3">
