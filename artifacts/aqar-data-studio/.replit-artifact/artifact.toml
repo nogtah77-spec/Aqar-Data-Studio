@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "Aqar Data Studio"
+version = "1.0.0"
+id = "artifacts/aqar-data-studio"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23108
+
+[services.development]
+run = "pnpm --filter @workspace/aqar-data-studio run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/aqar-data-studio", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/aqar-data-studio/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23108"
+BASE_PATH = "/"

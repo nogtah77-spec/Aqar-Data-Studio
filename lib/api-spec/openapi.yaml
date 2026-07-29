@@ -2,21 +2,39 @@ openapi: 3.1.0
 info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
-  version: 0.1.0
-  description: API specification
+  version: 1.0.0
+  description: Aqar Data Studio — Professional Real Estate Data Management Platform
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: properties
+    description: Property management
+  - name: regions
+    description: Region management
+  - name: property-types
+    description: Property type management
+  - name: lookup-options
+    description: Dynamic lookup values management
+  - name: dashboard
+    description: Dashboard statistics and activity
+  - name: users
+    description: User management
+  - name: audit-logs
+    description: Audit trail
+  - name: settings
+    description: Platform settings
+  - name: search
+    description: Global search
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +42,1251 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ─── PROPERTIES ────────────────────────────────────────────────────────────
+  /properties:
+    get:
+      operationId: listProperties
+      tags: [properties]
+      summary: List properties with pagination, filtering, and sorting
+      parameters:
+        - name: page
+          in: query
+          schema: { type: number, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: number, default: 20 }
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: regionId
+          in: query
+          schema: { type: string }
+        - name: typeId
+          in: query
+          schema: { type: string }
+        - name: category
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: minPrice
+          in: query
+          schema: { type: number }
+        - name: maxPrice
+          in: query
+          schema: { type: number }
+        - name: minArea
+          in: query
+          schema: { type: number }
+        - name: maxArea
+          in: query
+          schema: { type: number }
+        - name: finishing
+          in: query
+          schema: { type: string }
+        - name: featured
+          in: query
+          schema: { type: boolean }
+        - name: sortBy
+          in: query
+          schema: { type: string, default: createdAt }
+        - name: sortDir
+          in: query
+          schema: { type: string, enum: [asc, desc], default: desc }
+      responses:
+        "200":
+          description: Paginated property list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PropertyListResponse"
+
+    post:
+      operationId: createProperty
+      tags: [properties]
+      summary: Create a new property
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PropertyInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Property"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /properties/import:
+    post:
+      operationId: importProperties
+      tags: [properties]
+      summary: Import properties from parsed file data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImportInput"
+      responses:
+        "200":
+          description: Import result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportResult"
+
+  /properties/export:
+    post:
+      operationId: exportProperties
+      tags: [properties]
+      summary: Export properties in the specified format
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExportInput"
+      responses:
+        "200":
+          description: Export file (binary or text)
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+
+  /properties/bulk:
+    post:
+      operationId: bulkProperties
+      tags: [properties]
+      summary: Bulk operations on multiple properties
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkOperationInput"
+      responses:
+        "200":
+          description: Bulk operation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkOperationResult"
+
+  /properties/parse-text:
+    post:
+      operationId: parsePropertyText
+      tags: [properties]
+      summary: Smart property extraction from free Arabic/English text
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ParseTextInput"
+      responses:
+        "200":
+          description: Extracted property fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParseTextResult"
+
+  /properties/{id}:
+    get:
+      operationId: getProperty
+      tags: [properties]
+      summary: Get a single property by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Property detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Property"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    patch:
+      operationId: updateProperty
+      tags: [properties]
+      summary: Update a property
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PropertyUpdate"
+      responses:
+        "200":
+          description: Updated property
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Property"
+
+    delete:
+      operationId: deleteProperty
+      tags: [properties]
+      summary: Delete a property
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+
+  /properties/{id}/duplicate:
+    post:
+      operationId: duplicateProperty
+      tags: [properties]
+      summary: Duplicate a property (creates a copy with a new code)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "201":
+          description: Duplicated property
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Property"
+
+  /properties/{id}/history:
+    get:
+      operationId: getPropertyHistory
+      tags: [properties]
+      summary: Get version history for a property
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: History entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PropertyHistoryEntry"
+
+  # ─── REGIONS ────────────────────────────────────────────────────────────────
+  /regions:
+    get:
+      operationId: listRegions
+      tags: [regions]
+      summary: List all regions
+      responses:
+        "200":
+          description: Region list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Region"
+
+    post:
+      operationId: createRegion
+      tags: [regions]
+      summary: Create a new region
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegionInput"
+      responses:
+        "201":
+          description: Created region
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Region"
+
+  /regions/{id}:
+    patch:
+      operationId: updateRegion
+      tags: [regions]
+      summary: Update a region
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegionUpdate"
+      responses:
+        "200":
+          description: Updated region
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Region"
+
+    delete:
+      operationId: deleteRegion
+      tags: [regions]
+      summary: Delete a region
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+
+  # ─── PROPERTY TYPES ─────────────────────────────────────────────────────────
+  /property-types:
+    get:
+      operationId: listPropertyTypes
+      tags: [property-types]
+      summary: List all property types
+      responses:
+        "200":
+          description: Property type list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PropertyType"
+
+    post:
+      operationId: createPropertyType
+      tags: [property-types]
+      summary: Create a new property type
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PropertyTypeInput"
+      responses:
+        "201":
+          description: Created property type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PropertyType"
+
+  /property-types/{id}:
+    patch:
+      operationId: updatePropertyType
+      tags: [property-types]
+      summary: Update a property type
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PropertyTypeUpdate"
+      responses:
+        "200":
+          description: Updated property type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PropertyType"
+
+    delete:
+      operationId: deletePropertyType
+      tags: [property-types]
+      summary: Delete a property type
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+
+  # ─── LOOKUP OPTIONS (Dynamic) ─────────────────────────────────────────────
+  /lookup-options:
+    get:
+      operationId: listLookupOptions
+      tags: [lookup-options]
+      summary: List lookup options, optionally filtered by category
+      parameters:
+        - name: category
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Lookup options list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LookupOption"
+
+    post:
+      operationId: createLookupOption
+      tags: [lookup-options]
+      summary: Create a new lookup option
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LookupOptionInput"
+      responses:
+        "201":
+          description: Created lookup option
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LookupOption"
+
+  /lookup-options/{id}:
+    patch:
+      operationId: updateLookupOption
+      tags: [lookup-options]
+      summary: Update a lookup option
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LookupOptionUpdate"
+      responses:
+        "200":
+          description: Updated lookup option
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LookupOption"
+
+    delete:
+      operationId: deleteLookupOption
+      tags: [lookup-options]
+      summary: Delete a lookup option
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+
+  # ─── DASHBOARD ───────────────────────────────────────────────────────────
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Get dashboard KPIs and statistics
+      responses:
+        "200":
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /dashboard/activity:
+    get:
+      operationId: getDashboardActivity
+      tags: [dashboard]
+      summary: Get recent activity feed
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: number, default: 20 }
+      responses:
+        "200":
+          description: Recent activity entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityEntry"
+
+  # ─── USERS ───────────────────────────────────────────────────────────────
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List all users
+      responses:
+        "200":
+          description: User list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+
+    post:
+      operationId: createUser
+      tags: [users]
+      summary: Create a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserInput"
+      responses:
+        "201":
+          description: Created user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/{id}:
+    patch:
+      operationId: updateUser
+      tags: [users]
+      summary: Update a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+    delete:
+      operationId: deleteUser
+      tags: [users]
+      summary: Delete a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+
+  # ─── AUDIT LOGS ──────────────────────────────────────────────────────────
+  /audit-logs:
+    get:
+      operationId: listAuditLogs
+      tags: [audit-logs]
+      summary: List audit log entries with filtering
+      parameters:
+        - name: page
+          in: query
+          schema: { type: number, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: number, default: 50 }
+        - name: action
+          in: query
+          schema: { type: string }
+        - name: resourceType
+          in: query
+          schema: { type: string }
+        - name: userId
+          in: query
+          schema: { type: string }
+        - name: from
+          in: query
+          schema: { type: string, format: date-time }
+        - name: to
+          in: query
+          schema: { type: string, format: date-time }
+      responses:
+        "200":
+          description: Audit log entries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditLogListResponse"
+
+  # ─── SETTINGS ────────────────────────────────────────────────────────────
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [settings]
+      summary: Get platform settings
+      responses:
+        "200":
+          description: Settings object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+
+    patch:
+      operationId: updateSettings
+      tags: [settings]
+      summary: Update platform settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SettingsUpdate"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+
+  # ─── SEARCH ──────────────────────────────────────────────────────────────
+  /search:
+    get:
+      operationId: globalSearch
+      tags: [search]
+      summary: Global search across all entity types
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string }
+        - name: types
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: number, default: 10 }
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResponse"
+
+# ─── SCHEMAS ──────────────────────────────────────────────────────────────────
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
-        status:
-          type: string
-      required:
-        - status
+        status: { type: string }
 
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
+
+    DeleteResult:
+      type: object
+      required: [success]
+      properties:
+        success: { type: boolean }
+        id: { type: string }
+
+    # ── Property ────────────────────────────────────────────────────────────
+    Property:
+      type: object
+      required: [id, code, title, createdAt]
+      properties:
+        id: { type: string }
+        code: { type: string }
+        title: { type: string }
+        description: { type: string }
+        price: { type: number }
+        area: { type: number }
+        beds: { type: number }
+        baths: { type: number }
+        floors: { type: number }
+        floor: { type: number }
+        finishing: { type: string }
+        view: { type: string }
+        typeId: { type: string }
+        regionId: { type: string }
+        category: { type: string }
+        status: { type: string }
+        featured: { type: boolean }
+        agentType: { type: string }
+        images: { type: array, items: { type: string } }
+        videoUrl: { type: string }
+        externalUrl: { type: string }
+        mapsUrl: { type: string }
+        createdAt: { type: string }
+        unitType: { type: string }
+        subArea: { type: string }
+        layout: { type: string }
+        master: { type: string }
+        elevator: { type: string }
+        floorText: { type: string }
+        location: { type: string }
+        source: { type: ["string", "null"] }
+        sourcePhones: { type: array, items: { type: string } }
+        sourceEmail: { type: ["string", "null"] }
+        sourceLocation: { type: ["string", "null"] }
+        sourceNotes: { type: ["string", "null"] }
+        views: { type: number }
+        coverPriority: { type: string }
+        tags: { type: array, items: { type: string } }
+        notes: { type: ["string", "null"] }
+        regionName: { type: ["string", "null"] }
+        typeName: { type: ["string", "null"] }
+
+    PropertyInput:
+      type: object
+      required: [code]
+      properties:
+        code: { type: string }
+        title: { type: string }
+        description: { type: string }
+        price: { type: number }
+        area: { type: number }
+        beds: { type: number }
+        baths: { type: number }
+        floors: { type: number }
+        floor: { type: number }
+        finishing: { type: string }
+        view: { type: string }
+        typeId: { type: string }
+        regionId: { type: string }
+        category: { type: string }
+        status: { type: string }
+        featured: { type: boolean }
+        agentType: { type: string }
+        images: { type: array, items: { type: string } }
+        videoUrl: { type: string }
+        externalUrl: { type: string }
+        mapsUrl: { type: string }
+        unitType: { type: string }
+        subArea: { type: string }
+        layout: { type: string }
+        master: { type: string }
+        elevator: { type: string }
+        floorText: { type: string }
+        location: { type: string }
+        source: { type: string }
+        sourcePhones: { type: array, items: { type: string } }
+        sourceEmail: { type: string }
+        sourceLocation: { type: string }
+        sourceNotes: { type: string }
+        coverPriority: { type: string }
+        tags: { type: array, items: { type: string } }
+        notes: { type: string }
+
+    PropertyUpdate:
+      type: object
+      properties:
+        code: { type: string }
+        title: { type: string }
+        description: { type: string }
+        price: { type: number }
+        area: { type: number }
+        beds: { type: number }
+        baths: { type: number }
+        floors: { type: number }
+        floor: { type: number }
+        finishing: { type: string }
+        view: { type: string }
+        typeId: { type: string }
+        regionId: { type: string }
+        category: { type: string }
+        status: { type: string }
+        featured: { type: boolean }
+        agentType: { type: string }
+        images: { type: array, items: { type: string } }
+        videoUrl: { type: string }
+        externalUrl: { type: string }
+        mapsUrl: { type: string }
+        unitType: { type: string }
+        subArea: { type: string }
+        layout: { type: string }
+        master: { type: string }
+        elevator: { type: string }
+        floorText: { type: string }
+        location: { type: string }
+        source: { type: string }
+        sourcePhones: { type: array, items: { type: string } }
+        sourceEmail: { type: string }
+        sourceLocation: { type: string }
+        sourceNotes: { type: string }
+        coverPriority: { type: string }
+        tags: { type: array, items: { type: string } }
+        notes: { type: string }
+
+    PropertyListResponse:
+      type: object
+      required: [data, total, page, limit, totalPages]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Property"
+        total: { type: number }
+        page: { type: number }
+        limit: { type: number }
+        totalPages: { type: number }
+
+    PropertyHistoryEntry:
+      type: object
+      required: [id, propertyId, action, changedAt]
+      properties:
+        id: { type: string }
+        propertyId: { type: string }
+        action: { type: string }
+        changedAt: { type: string }
+        changedBy: { type: ["string", "null"] }
+        snapshot: { type: object }
+        diff: { type: object }
+
+    # ── Import / Export ────────────────────────────────────────────────────
+    ImportedRow:
+      type: object
+      required: [code]
+      properties:
+        code: { type: string }
+        title: { type: string }
+        description: { type: string }
+        price: { type: number }
+        area: { type: number }
+        beds: { type: number }
+        baths: { type: number }
+        floors: { type: number }
+        floor: { type: number }
+        finishing: { type: string }
+        view: { type: string }
+        typeId: { type: string }
+        regionId: { type: string }
+        category: { type: string }
+        status: { type: string }
+        featured: { type: boolean }
+        agentType: { type: string }
+        unitType: { type: string }
+        subArea: { type: string }
+        layout: { type: string }
+        master: { type: string }
+        elevator: { type: string }
+        floorText: { type: string }
+        location: { type: string }
+        source: { type: string }
+        videoUrl: { type: string }
+        externalUrl: { type: string }
+        mapsUrl: { type: string }
+
+    ImportInput:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportedRow"
+        mode:
+          type: string
+          enum: [insert, update, merge, skip]
+          default: merge
+        dryRun:
+          type: boolean
+          default: false
+
+    ImportResult:
+      type: object
+      required: [added, updated, skipped, errors]
+      properties:
+        added: { type: number }
+        updated: { type: number }
+        skipped: { type: number }
+        errors: { type: number }
+        dryRun: { type: boolean }
+        details:
+          type: array
+          items:
+            type: object
+
+    ExportInput:
+      type: object
+      required: [format]
+      properties:
+        format:
+          type: string
+          enum: [csv, excel, json, txt, pdf]
+        columns:
+          type: array
+          items: { type: string }
+        filters:
+          type: object
+        sortBy: { type: string }
+        sortDir: { type: string, enum: [asc, desc] }
+
+    # ── Bulk Operations ────────────────────────────────────────────────────
+    BulkOperationInput:
+      type: object
+      required: [operation, ids]
+      properties:
+        operation:
+          type: string
+          enum: [delete, update, archive, activate, feature, unfeature]
+        ids:
+          type: array
+          items: { type: string }
+          minItems: 1
+        updates:
+          type: object
+
+    BulkOperationResult:
+      type: object
+      required: [success, affected]
+      properties:
+        success: { type: boolean }
+        affected: { type: number }
+        errors:
+          type: array
+          items: { type: string }
+
+    # ── Smart Parsing ─────────────────────────────────────────────────────
+    ParseTextInput:
+      type: object
+      required: [text]
+      properties:
+        text: { type: string }
+
+    ParseTextResult:
+      type: object
+      properties:
+        area: { type: ["integer", "null"] }
+        beds: { type: ["integer", "null"] }
+        baths: { type: ["integer", "null"] }
+        price: { type: ["integer", "null"] }
+        finishing: { type: ["string", "null"] }
+        view: { type: ["string", "null"] }
+        regionId: { type: ["string", "null"] }
+        regionName: { type: ["string", "null"] }
+        subArea: { type: ["string", "null"] }
+        floor: { type: ["integer", "null"] }
+        floorText: { type: ["string", "null"] }
+        unitType: { type: ["string", "null"] }
+        layout: { type: ["string", "null"] }
+        description: { type: ["string", "null"] }
+        confidence: { type: number }
+
+    # ── Region ────────────────────────────────────────────────────────────
+    Region:
+      type: object
+      required: [id, name, active]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        active: { type: boolean }
+        propertyCount: { type: number }
+
+    RegionInput:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        active: { type: boolean }
+
+    RegionUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        active: { type: boolean }
+
+    # ── PropertyType ──────────────────────────────────────────────────────
+    PropertyType:
+      type: object
+      required: [id, name, active]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        active: { type: boolean }
+        propertyCount: { type: number }
+
+    PropertyTypeInput:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        active: { type: boolean }
+
+    PropertyTypeUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        active: { type: boolean }
+
+    # ── LookupOption (dynamic values) ─────────────────────────────────────
+    LookupOption:
+      type: object
+      required: [id, category, value, label, active, sortOrder]
+      properties:
+        id: { type: string }
+        category: { type: string }
+        value: { type: string }
+        label: { type: string }
+        active: { type: boolean }
+        sortOrder: { type: number }
+
+    LookupOptionInput:
+      type: object
+      required: [category, value, label]
+      properties:
+        category: { type: string }
+        value: { type: string }
+        label: { type: string }
+        active: { type: boolean }
+        sortOrder: { type: number }
+
+    LookupOptionUpdate:
+      type: object
+      properties:
+        value: { type: string }
+        label: { type: string }
+        active: { type: boolean }
+        sortOrder: { type: number }
+
+    # ── Dashboard ─────────────────────────────────────────────────────────
+    DashboardStats:
+      type: object
+      required: [totalProperties, activeProperties, totalValue, avgPrice]
+      properties:
+        totalProperties: { type: number }
+        activeProperties: { type: number }
+        draftProperties: { type: number }
+        soldProperties: { type: number }
+        rentedProperties: { type: number }
+        featuredProperties: { type: number }
+        totalValue: { type: number }
+        avgPrice: { type: number }
+        avgArea: { type: number }
+        byCategory:
+          type: array
+          items:
+            type: object
+            properties:
+              category: { type: string }
+              count: { type: number }
+              value: { type: number }
+        byRegion:
+          type: array
+          items:
+            type: object
+            properties:
+              regionId: { type: string }
+              regionName: { type: string }
+              count: { type: number }
+        byType:
+          type: array
+          items:
+            type: object
+            properties:
+              typeId: { type: string }
+              typeName: { type: string }
+              count: { type: number }
+        byStatus:
+          type: array
+          items:
+            type: object
+            properties:
+              status: { type: string }
+              count: { type: number }
+        recentImports: { type: number }
+        thisMonthAdded: { type: number }
+        lastMonthAdded: { type: number }
+
+    ActivityEntry:
+      type: object
+      required: [id, action, resourceType, createdAt]
+      properties:
+        id: { type: string }
+        action: { type: string }
+        resourceType: { type: string }
+        resourceId: { type: ["string", "null"] }
+        resourceLabel: { type: ["string", "null"] }
+        userId: { type: ["string", "null"] }
+        userName: { type: ["string", "null"] }
+        createdAt: { type: string }
+        meta: { type: object }
+
+    # ── User ──────────────────────────────────────────────────────────────
+    User:
+      type: object
+      required: [id, email, role, active, createdAt]
+      properties:
+        id: { type: string }
+        email: { type: string }
+        name: { type: ["string", "null"] }
+        role: { type: string, enum: [admin, agent, viewer] }
+        active: { type: boolean }
+        createdAt: { type: string }
+        lastSignIn: { type: ["string", "null"] }
+
+    UserInput:
+      type: object
+      required: [email, role]
+      properties:
+        email: { type: string, format: string }
+        name: { type: string }
+        role: { type: string, enum: [admin, agent, viewer] }
+        active: { type: boolean }
+
+    UserUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        role: { type: string, enum: [admin, agent, viewer] }
+        active: { type: boolean }
+
+    # ── Audit Log ─────────────────────────────────────────────────────────
+    AuditLog:
+      type: object
+      required: [id, action, resourceType, createdAt]
+      properties:
+        id: { type: string }
+        action: { type: string }
+        resourceType: { type: string }
+        resourceId: { type: ["string", "null"] }
+        resourceLabel: { type: ["string", "null"] }
+        userId: { type: ["string", "null"] }
+        userName: { type: ["string", "null"] }
+        ipAddress: { type: ["string", "null"] }
+        createdAt: { type: string }
+        before: { type: object }
+        after: { type: object }
+
+    AuditLogListResponse:
+      type: object
+      required: [data, total, page, limit]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditLog"
+        total: { type: number }
+        page: { type: number }
+        limit: { type: number }
+
+    # ── Settings ─────────────────────────────────────────────────────────
+    Settings:
+      type: object
+      properties:
+        companyName: { type: string }
+        companyLogo: { type: ["string", "null"] }
+        defaultRegionId: { type: ["string", "null"] }
+        defaultCategory: { type: string }
+        defaultStatus: { type: string }
+        currency: { type: string }
+        language: { type: string }
+        dateFormat: { type: string }
+        publicListingsEnabled: { type: boolean }
+        requireAuthForListings: { type: boolean }
+
+    SettingsUpdate:
+      type: object
+      properties:
+        companyName: { type: string }
+        companyLogo: { type: string }
+        defaultRegionId: { type: string }
+        defaultCategory: { type: string }
+        defaultStatus: { type: string }
+        currency: { type: string }
+        language: { type: string }
+        dateFormat: { type: string }
+        publicListingsEnabled: { type: boolean }
+        requireAuthForListings: { type: boolean }
+
+    # ── Search ────────────────────────────────────────────────────────────
+    SearchResult:
+      type: object
+      required: [type, id, label]
+      properties:
+        type: { type: string }
+        id: { type: string }
+        label: { type: string }
+        subtitle: { type: ["string", "null"] }
+        score: { type: number }
+
+    SearchResponse:
+      type: object
+      required: [results, query, total]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/SearchResult"
+        query: { type: string }
+        total: { type: number }
