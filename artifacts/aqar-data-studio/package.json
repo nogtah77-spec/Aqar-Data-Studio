@@ -75,6 +75,9 @@
     "zod": "catalog:"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.110.9"
+    "@supabase/supabase-js": "^2.110.9",
+    "@types/papaparse": "^5.5.2",
+    "papaparse": "^5.5.4",
+    "xlsx": "^0.18.5"
   }
 }
