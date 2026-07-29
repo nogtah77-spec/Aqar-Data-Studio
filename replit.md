@@ -1,64 +1,72 @@
 # Aqar Data Studio
 
-A professional SaaS platform for real estate data management. Bilingual (Arabic + English), import-friendly, audit-everything.
+A bilingual (Arabic + English) real estate data management SaaS platform. Import-friendly, with full audit logging.
 
-## Run & Operate
+## Tech Stack
 
-- **Frontend** — `PORT=5173 BASE_PATH=/ pnpm --filter @workspace/aqar-data-studio run dev` (port 5173)
-- **API Server** — `PORT=8080 pnpm --filter @workspace/api-server run dev` (port 8080)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
+- **Frontend**: React 19 + Vite + TypeScript + TanStack Query (`artifacts/aqar-data-studio/`)
+- **Backend**: Express 5 + Node.js 24 (`artifacts/api-server/`)
+- **Database**: Supabase (PostgreSQL) + Supabase Auth
+- **UI**: Tailwind CSS v4 + shadcn/ui
+- **API Contract**: OpenAPI 3.1 (`lib/api-spec/openapi.yaml`) + Orval codegen
 
-## Required Secrets
+## Running the Project
 
-| Key | Description |
-|-----|-------------|
-| `VITE_SUPABASE_URL` | Supabase project URL |
-| `VITE_SUPABASE_ANON_KEY` | Supabase public anon key (used by frontend) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (used by API server only) |
+Two workflows must be running simultaneously:
 
-## Stack
+| Workflow | Command | Port |
+|---|---|---|
+| `Aqar Data Studio` | `PORT=5173 BASE_PATH=/ pnpm --filter @workspace/aqar-data-studio run dev` | 5173 |
+| `API Server` | `PORT=8080 pnpm --filter @workspace/api-server run dev` | 8080 |
 
-- pnpm workspaces, **Node.js 22**, TypeScript 5.9
-- Frontend: React 19 + Vite + TanStack Query + Tailwind CSS v4 + shadcn/ui
-- API: Express 5 + Node.js
-- DB: Supabase (PostgreSQL) + Supabase Auth
-- Validation: Zod, generated via Orval from OpenAPI spec
-- Build: esbuild
+The frontend proxies `/api` requests to port 8080 automatically (configured in `vite.config.ts`).
 
-## Where things live
+## Environment Secrets Required
+
+Set these in Replit Secrets (Tools → Secrets):
+
+| Secret | Where to find it |
+|---|---|
+| `VITE_SUPABASE_URL` | Supabase dashboard → Settings → API → Project URL |
+| `VITE_SUPABASE_ANON_KEY` | Supabase dashboard → Settings → API → anon public key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase dashboard → Settings → API → service_role secret key |
+| `SESSION_SECRET` | Any random string (used for session signing) |
+
+## Database Migration
+
+On a fresh Supabase project, run the initial schema migration **once**:
+
+1. Open your Supabase dashboard → SQL Editor
+2. Copy the contents of `supabase/migrations/001_initial_schema.sql`
+3. Paste and run it
+
+This creates all tables (properties, regions, property_types, lookup_options, audit_logs, settings, etc.), indexes, RLS policies, and seed data.
+
+## Regenerating API Types
+
+After any change to `lib/api-spec/openapi.yaml`:
+
+```bash
+pnpm --filter @workspace/api-spec run codegen
+```
+
+This regenerates React Query hooks in `lib/api-client-react/` and Zod schemas in `lib/api-zod/`.
+
+## Project Structure
 
 ```
 artifacts/
-  aqar-data-studio/   # React frontend (port 5173)
-  api-server/         # Express backend (port 8080)
+  aqar-data-studio/   # React frontend (Vite, TanStack Query, shadcn/ui)
+  api-server/         # Express backend (service-role Supabase admin client)
 lib/
-  api-spec/           # OpenAPI spec — source of truth for API contract
-  api-client-react/   # Generated React Query hooks (do not edit by hand)
-  api-zod/            # Generated Zod schemas (do not edit by hand)
+  api-spec/           # OpenAPI spec — source of truth for all API contracts
+  api-client-react/   # Generated React Query hooks (do not edit manually)
+  api-zod/            # Generated Zod schemas (do not edit manually)
 supabase/
-  migrations/         # Run 001_initial_schema.sql in Supabase SQL Editor
-docs/                 # Architecture, DB schema, roadmap
+  migrations/         # Database schema SQL files
+docs/                 # Architecture, database, import engine, roadmap docs
 ```
 
-## Architecture decisions
+## User Preferences
 
-- API codegen from `lib/api-spec/openapi.yaml` — run codegen after any spec changes, never edit generated files directly
-- Frontend uses BASE_PATH env var for path-based routing prefix
-- Supabase service role key is server-side only; frontend uses anon key + RLS
-
-## Gotchas
-
-- Node.js 22 required — Supabase realtime-js uses native WebSocket which needs Node 22+
-- Both `PORT` and `BASE_PATH` env vars are required for the frontend to start
-- Run `supabase/migrations/001_initial_schema.sql` in Supabase SQL Editor before first run
-
-## User preferences
-
-_Populate as you build — explicit user instructions worth remembering across sessions._
-
-## Pointers
-
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
-- See `docs/ARCHITECTURE.md` for system architecture and data flow
+- Use the dedicated Supabase project created for Aqar Data Studio — do not reuse any old project or credentials.
