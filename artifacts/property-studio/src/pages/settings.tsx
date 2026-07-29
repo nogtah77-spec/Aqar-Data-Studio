@@ -30,7 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const settingsSchema = z.object({
@@ -168,7 +168,7 @@ export default function Settings() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {regions?.data.map((region) => (
+                          {regions?.map((region) => (
                             <SelectItem key={region.id} value={region.id} dir="auto" className="font-arabic">
                               {region.name}
                             </SelectItem>
@@ -193,7 +193,7 @@ export default function Settings() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {categories?.data.map((cat) => (
+                          {categories?.map((cat) => (
                             <SelectItem key={cat.value} value={cat.value} dir="auto" className="font-arabic">
                               {cat.label}
                             </SelectItem>
@@ -218,7 +218,7 @@ export default function Settings() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {statuses?.data.map((status) => (
+                          {statuses?.map((status) => (
                             <SelectItem key={status.value} value={status.value} dir="auto" className="font-arabic">
                               {status.label}
                             </SelectItem>

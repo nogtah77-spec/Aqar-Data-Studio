@@ -27,7 +27,7 @@ function GlobalSearch() {
 
   const { data, isLoading } = useGlobalSearch(
     { q: query, limit: 5 }, 
-    { query: { enabled: query.length > 1 } }
+    { query: { queryKey: ["global-search", query], enabled: query.length > 1 } }
   );
 
   return (

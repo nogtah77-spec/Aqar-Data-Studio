@@ -9,7 +9,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Download, GripVertical, FileSpreadsheet, FileJson, FileText } from "lucide-react";
 import { allColumns, generateClientExport, downloadBlob } from "@/lib/export-engine";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
 export default function ExportStudio() {
@@ -120,7 +120,7 @@ export default function ExportStudio() {
                   <SelectTrigger><SelectValue placeholder="All Regions" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Regions</SelectItem>
-                    {regions?.data.map(r => <SelectItem key={r.id} value={r.id} dir="auto">{r.name}</SelectItem>)}
+                    {regions?.map(r => <SelectItem key={r.id} value={r.id} dir="auto">{r.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -130,7 +130,7 @@ export default function ExportStudio() {
                   <SelectTrigger><SelectValue placeholder="All Types" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Types</SelectItem>
-                    {types?.data.map(t => <SelectItem key={t.id} value={t.id} dir="auto">{t.name}</SelectItem>)}
+                    {types?.map(t => <SelectItem key={t.id} value={t.id} dir="auto">{t.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -140,7 +140,7 @@ export default function ExportStudio() {
                   <SelectTrigger><SelectValue placeholder="All Categories" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Categories</SelectItem>
-                    {categories?.data.map(c => <SelectItem key={c.value} value={c.value} dir="auto">{c.label}</SelectItem>)}
+                    {categories?.map(c => <SelectItem key={c.value} value={c.value} dir="auto">{c.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -150,7 +150,7 @@ export default function ExportStudio() {
                   <SelectTrigger><SelectValue placeholder="All Statuses" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Statuses</SelectItem>
-                    {statuses?.data.map(s => <SelectItem key={s.value} value={s.value} dir="auto">{s.label}</SelectItem>)}
+                    {statuses?.map(s => <SelectItem key={s.value} value={s.value} dir="auto">{s.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>

@@ -47,7 +47,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const propertySchema = z.object({
@@ -339,7 +339,7 @@ export default function PropertyForm() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {regions?.data.map((region) => (
+                                {regions?.map((region) => (
                                   <SelectItem key={region.id} value={region.id} dir="auto" className="font-arabic">
                                     {region.name}
                                   </SelectItem>
@@ -404,7 +404,7 @@ export default function PropertyForm() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {propertyTypes?.data.map((type) => (
+                                {propertyTypes?.map((type) => (
                                   <SelectItem key={type.id} value={type.id} dir="auto" className="font-arabic">
                                     {type.name}
                                   </SelectItem>
@@ -429,7 +429,7 @@ export default function PropertyForm() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {categories?.data.map((opt) => (
+                                {categories?.map((opt) => (
                                   <SelectItem key={opt.value} value={opt.value} dir="auto" className="font-arabic">
                                     {opt.label}
                                   </SelectItem>
@@ -454,7 +454,7 @@ export default function PropertyForm() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {statuses?.data.map((opt) => (
+                                {statuses?.map((opt) => (
                                   <SelectItem key={opt.value} value={opt.value} dir="auto" className="font-arabic">
                                     {opt.label}
                                   </SelectItem>
@@ -479,7 +479,7 @@ export default function PropertyForm() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {unitTypes?.data.map((opt) => (
+                                {unitTypes?.map((opt) => (
                                   <SelectItem key={opt.value} value={opt.value} dir="auto" className="font-arabic">
                                     {opt.label}
                                   </SelectItem>
@@ -618,7 +618,7 @@ export default function PropertyForm() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {finishings?.data.map((opt) => (
+                                {finishings?.map((opt) => (
                                   <SelectItem key={opt.value} value={opt.value} dir="auto" className="font-arabic">
                                     {opt.label}
                                   </SelectItem>

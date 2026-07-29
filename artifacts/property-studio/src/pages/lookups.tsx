@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
@@ -127,7 +127,7 @@ function RegionsTab() {
           <TableBody>
             {isLoading ? (
               <TableRow><TableCell colSpan={4}><Skeleton className="h-10" /></TableCell></TableRow>
-            ) : data?.data.map((region) => (
+            ) : data?.map((region) => (
               <TableRow key={region.id}>
                 <TableCell>
                   {editingId === region.id ? (
@@ -271,7 +271,7 @@ function TypesTab() {
           <TableBody>
             {isLoading ? (
               <TableRow><TableCell colSpan={4}><Skeleton className="h-10" /></TableCell></TableRow>
-            ) : data?.data.map((type) => (
+            ) : data?.map((type) => (
               <TableRow key={type.id}>
                 <TableCell>
                   {editingId === type.id ? (
@@ -418,7 +418,7 @@ function LookupTab({ category }: { category: string }) {
           <TableBody>
             {isLoading ? (
               <TableRow><TableCell colSpan={5}><Skeleton className="h-10" /></TableCell></TableRow>
-            ) : data?.data.map((opt) => (
+            ) : data?.map((opt) => (
               <TableRow key={opt.id}>
                 <TableCell>
                   <GripVertical className="h-4 w-4 text-muted-foreground cursor-move" />
