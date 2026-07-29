@@ -11,6 +11,7 @@ import { settingsRouter } from "./settings.js";
 import { searchRouter } from "./search.js";
 
 export const router = Router();
+export default router;
 
 router.use("/", healthRouter);
 router.use("/properties", propertiesRouter);

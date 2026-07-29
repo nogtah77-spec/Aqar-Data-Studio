@@ -8,4 +8,5 @@ router.get("/healthz", (_req, res) => {
   res.json(data);
 });
 
+export { router as healthRouter };
 export default router;
