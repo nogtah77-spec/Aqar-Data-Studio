@@ -1,4 +1,4 @@
-modules = ["nodejs-24"]
+modules = ["nodejs-20", "web"]
 
 [deployment]
 router = "application"
@@ -26,3 +26,6 @@ VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhY
 VITE_SUPABASE_URL = "https://wyapfkmndcfqmdjtvgwk.supabase.co"
 SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind5YXBma21uZGNmcW1kanR2Z3drIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NTI3NjcxNiwiZXhwIjoyMTAwODUyNzE2fQ.Grv4tfPeGnMyKQgeP78kDn1JmKOOnOhgTZz1aaUAW2s"
 SUPABASE_URL = "https://wyapfkmndcfqmdjtvgwk.supabase.co"
+
+[nix]
+channel = "stable-25_05"
