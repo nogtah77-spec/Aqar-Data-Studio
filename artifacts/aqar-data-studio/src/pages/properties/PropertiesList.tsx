@@ -11,13 +11,41 @@ import { formatPrice, formatArea } from "@/lib/utils";
 import {
   Search, Plus, FileDown, Filter, MoreHorizontal, Trash2,
   Archive, CheckCircle2, Star, X, ChevronLeft, ChevronRight,
-  LayoutGrid, LayoutList, Building2, MapPin,
+  LayoutGrid, LayoutList, Building2, MapPin, BookmarkPlus, Bookmark,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+
+// ── Saved filter presets (localStorage) ──────────────────────────────────────
+
+const SAVED_FILTERS_KEY = "aqar:saved_filter_presets";
+
+interface FilterPreset {
+  id: string;
+  name: string;
+  region: string;
+  type: string;
+  category: string;
+  status: string;
+}
+
+function loadPresets(): FilterPreset[] {
+  try {
+    return JSON.parse(localStorage.getItem(SAVED_FILTERS_KEY) ?? "[]");
+  } catch {
+    return [];
+  }
+}
+
+function savePresets(presets: FilterPreset[]) {
+  localStorage.setItem(SAVED_FILTERS_KEY, JSON.stringify(presets));
+}
 
 // ── Status badge helper ───────────────────────────────────────────────────────
 
@@ -114,6 +142,45 @@ export default function PropertiesList() {
   const [bulkLoading, setBulkLoading] = useState(false);
   const [, setLocation] = useLocation();
   const limit = 20;
+
+  // Saved filter presets
+  const [presets, setPresets] = useState<FilterPreset[]>(() => loadPresets());
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [presetName, setPresetName] = useState("");
+
+  const saveCurrentFilters = () => {
+    const name = presetName.trim();
+    if (!name) return;
+    const next: FilterPreset[] = [
+      ...presets.filter((p) => p.name !== name),
+      {
+        id: Date.now().toString(),
+        name,
+        region: filterRegion,
+        type: filterType,
+        category: filterCategory,
+        status: filterStatus,
+      },
+    ];
+    setPresets(next);
+    savePresets(next);
+    setPresetName("");
+    setShowSaveDialog(false);
+  };
+
+  const loadPreset = (preset: FilterPreset) => {
+    setFilterRegion(preset.region);
+    setFilterType(preset.type);
+    setFilterCategory(preset.category);
+    setFilterStatus(preset.status);
+    setPage(1);
+  };
+
+  const deletePreset = (id: string) => {
+    const next = presets.filter((p) => p.id !== id);
+    setPresets(next);
+    savePresets(next);
+  };
 
   const params = {
     page,
@@ -296,15 +363,78 @@ export default function PropertiesList() {
               </Select>
             </div>
           </div>
-          {hasFilters && (
-            <div className="mt-3 flex justify-end">
-              <Button variant="ghost" size="sm" className="gap-1.5 text-xs h-7" onClick={clearFilters}>
-                <X size={12} /> مسح الفلاتر
-              </Button>
+          <div className="mt-3 flex items-center justify-between gap-2 flex-wrap">
+            {/* Saved presets loader */}
+            {presets.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-1.5 text-xs h-7">
+                    <Bookmark size={12} />
+                    الفلاتر المحفوظة
+                    <Badge variant="secondary" className="text-[10px] h-4 px-1 ms-0.5">{presets.length}</Badge>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-52">
+                  {presets.map((preset) => (
+                    <DropdownMenuItem
+                      key={preset.id}
+                      className="flex items-center justify-between group gap-2 cursor-pointer"
+                      onSelect={() => loadPreset(preset)}
+                    >
+                      <span className="truncate">{preset.name}</span>
+                      <button
+                        className="opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive transition-opacity ms-auto shrink-0"
+                        onClick={(e) => { e.stopPropagation(); deletePreset(preset.id); }}
+                        title="حذف"
+                      >
+                        <X size={12} />
+                      </button>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
+            <div className="flex items-center gap-2 ms-auto">
+              {hasFilters && (
+                <Button variant="ghost" size="sm" className="gap-1.5 text-xs h-7"
+                  onClick={() => { setShowSaveDialog(true); setPresetName(""); }}>
+                  <BookmarkPlus size={12} /> حفظ الفلتر
+                </Button>
+              )}
+              {hasFilters && (
+                <Button variant="ghost" size="sm" className="gap-1.5 text-xs h-7" onClick={clearFilters}>
+                  <X size={12} /> مسح
+                </Button>
+              )}
             </div>
-          )}
+          </div>
         </div>
       )}
+
+      {/* Save filter preset dialog */}
+      <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+        <DialogContent className="max-w-sm" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>حفظ مجموعة الفلاتر</DialogTitle>
+          </DialogHeader>
+          <Input
+            placeholder="اسم مجموعة الفلاتر…"
+            value={presetName}
+            onChange={(e) => setPresetName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && saveCurrentFilters()}
+            autoFocus
+          />
+          <DialogFooter className="flex-row-reverse gap-2">
+            <Button size="sm" onClick={saveCurrentFilters} disabled={!presetName.trim()}>
+              حفظ
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setShowSaveDialog(false)}>
+              إلغاء
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Bulk action bar */}
       {selected.size > 0 && (
