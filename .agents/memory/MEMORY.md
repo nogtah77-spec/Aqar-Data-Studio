@@ -1,0 +1,2 @@
+- [Node.js 20 WebSocket fix](nodejs-ws-fix.md) — @supabase/realtime-js needs ws package explicitly on Node 20
+- [API early-return pattern](api-early-return.md) — every early res.status() in Express 5 must be prefixed with return void
