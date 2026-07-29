@@ -1,0 +1,9 @@
+{
+  "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @workspace/aqar-data-studio run build",
+  "outputDirectory": "artifacts/aqar-data-studio/dist/public",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "framework": null,
+  "rewrites": [
+    { "source": "/((?!assets|favicon|robots|manifest).*)", "destination": "/index.html" }
+  ]
+}
