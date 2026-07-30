@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useListProperties, useDeleteProperty, getListPropertiesQueryKey } from "@workspace/api-client-react";
+import { useListProperties, useDeleteProperty, useDuplicateProperty, getListPropertiesQueryKey } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -51,6 +51,19 @@ export default function PropertiesList() {
   });
 
   const deleteProperty = useDeleteProperty();
+  const duplicateProperty = useDuplicateProperty();
+
+  const handleDuplicate = (id: string) => {
+    duplicateProperty.mutate({ id }, {
+      onSuccess: (newProp) => {
+        toast({ title: "Property duplicated", description: `New code: ${newProp.code}` });
+        queryClient.invalidateQueries({ queryKey: getListPropertiesQueryKey() });
+      },
+      onError: () => {
+        toast({ title: "Error duplicating property", variant: "destructive" });
+      }
+    });
+  };
 
   const handleDelete = (id: string) => {
     if (confirm("Are you sure you want to delete this property?")) {
@@ -195,7 +208,11 @@ export default function PropertiesList() {
                         <Link href={`/properties/${property.id}/edit`} className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full">
                           <Edit className="h-4 w-4 mr-2" /> Edit
                         </Link>
-                        <DropdownMenuItem className="cursor-pointer">
+                        <DropdownMenuItem
+                          className="cursor-pointer"
+                          onClick={() => handleDuplicate(property.id)}
+                          disabled={duplicateProperty.isPending}
+                        >
                           <Copy className="h-4 w-4 mr-2" /> Duplicate
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />

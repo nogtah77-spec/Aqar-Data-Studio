@@ -1,0 +1,118 @@
+diff --git a/artifacts/property-studio/src/pages/export.tsx b/artifacts/property-studio/src/pages/export.tsx
+index 0787062..1a4c246 100644
+--- a/artifacts/property-studio/src/pages/export.tsx
++++ b/artifacts/property-studio/src/pages/export.tsx
+@@ -9,7 +9,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+ import { Download, GripVertical, FileSpreadsheet, FileJson, FileText } from "lucide-react";
+ import { allColumns, generateClientExport, downloadBlob } from "@/lib/export-engine";
+-import { useToast } from "@/components/ui/use-toast";
++import { useToast } from "@/hooks/use-toast";
+ import { format } from "date-fns";
+ 
+ export default function ExportStudio() {
+diff --git a/artifacts/property-studio/src/pages/import.tsx b/artifacts/property-studio/src/pages/import.tsx
+index 89c3771..4896256 100644
+--- a/artifacts/property-studio/src/pages/import.tsx
++++ b/artifacts/property-studio/src/pages/import.tsx
+@@ -19,7 +19,7 @@ import {
+   SelectTrigger,
+   SelectValue,
+ } from "@/components/ui/select";
+-import { useToast } from "@/components/ui/use-toast";
++import { useToast } from "@/hooks/use-toast";
+ import { Progress } from "@/components/ui/progress";
+ import { cn } from "@/lib/utils";
+ 
+diff --git a/artifacts/property-studio/src/pages/lookups.tsx b/artifacts/property-studio/src/pages/lookups.tsx
+index f2368b5..a222ce1 100644
+--- a/artifacts/property-studio/src/pages/lookups.tsx
++++ b/artifacts/property-studio/src/pages/lookups.tsx
+@@ -31,7 +31,7 @@ import {
+ } from "@/components/ui/table";
+ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+-import { useToast } from "@/components/ui/use-toast";
++import { useToast } from "@/hooks/use-toast";
+ import { Skeleton } from "@/components/ui/skeleton";
+ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+ 
+diff --git a/artifacts/property-studio/src/pages/properties/form.tsx b/artifacts/property-studio/src/pages/properties/form.tsx
+index 43207fd..29fde13 100644
+--- a/artifacts/property-studio/src/pages/properties/form.tsx
++++ b/artifacts/property-studio/src/pages/properties/form.tsx
+@@ -47,7 +47,7 @@ import {
+ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+ import { Switch } from "@/components/ui/switch";
+-import { useToast } from "@/components/ui/use-toast";
++import { useToast } from "@/hooks/use-toast";
+ import { Skeleton } from "@/components/ui/skeleton";
+ 
+ const propertySchema = z.object({
+diff --git a/artifacts/property-studio/src/pages/properties/list.tsx b/artifacts/property-studio/src/pages/properties/list.tsx
+index 6856e59..e8c1407 100644
+--- a/artifacts/property-studio/src/pages/properties/list.tsx
++++ b/artifacts/property-studio/src/pages/properties/list.tsx
+@@ -1,5 +1,5 @@
+ import { useState } from "react";
+-import { useListProperties, useDeleteProperty, getListPropertiesQueryKey } from "@workspace/api-client-react";
++import { useListProperties, useDeleteProperty, useDuplicateProperty, getListPropertiesQueryKey } from "@workspace/api-client-react";
+ import { Link } from "wouter";
+ import { useQueryClient } from "@tanstack/react-query";
+ import { format } from "date-fns";
+@@ -36,7 +36,7 @@ import {
+ } from "@/components/ui/dropdown-menu";
+ import { Badge } from "@/components/ui/badge";
+ import { Skeleton } from "@/components/ui/skeleton";
+-import { useToast } from "@/components/ui/use-toast";
++import { useToast } from "@/hooks/use-toast";
+ 
+ export default function PropertiesList() {
+   const [page, setPage] = useState(1);
+@@ -51,6 +51,19 @@ export default function PropertiesList() {
+   });
+ 
+   const deleteProperty = useDeleteProperty();
++  const duplicateProperty = useDuplicateProperty();
++
++  const handleDuplicate = (id: string) => {
++    duplicateProperty.mutate({ id }, {
++      onSuccess: (newProp) => {
++        toast({ title: "Property duplicated", description: `New code: ${newProp.code}` });
++        queryClient.invalidateQueries({ queryKey: getListPropertiesQueryKey() });
++      },
++      onError: () => {
++        toast({ title: "Error duplicating property", variant: "destructive" });
++      }
++    });
++  };
+ 
+   const handleDelete = (id: string) => {
+     if (confirm("Are you sure you want to delete this property?")) {
+@@ -195,7 +208,11 @@ export default function PropertiesList() {
+                         <Link href={`/properties/${property.id}/edit`} className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full">
+                           <Edit className="h-4 w-4 mr-2" /> Edit
+                         </Link>
+-                        <DropdownMenuItem className="cursor-pointer">
++                        <DropdownMenuItem
++                          className="cursor-pointer"
++                          onClick={() => handleDuplicate(property.id)}
++                          disabled={duplicateProperty.isPending}
++                        >
+                           <Copy className="h-4 w-4 mr-2" /> Duplicate
+                         </DropdownMenuItem>
+                         <DropdownMenuSeparator />
+diff --git a/artifacts/property-studio/src/pages/settings.tsx b/artifacts/property-studio/src/pages/settings.tsx
+index 37a15ad..37d4d92 100644
+--- a/artifacts/property-studio/src/pages/settings.tsx
++++ b/artifacts/property-studio/src/pages/settings.tsx
+@@ -30,7 +30,7 @@ import {
+   SelectValue,
+ } from "@/components/ui/select";
+ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+-import { useToast } from "@/components/ui/use-toast";
++import { useToast } from "@/hooks/use-toast";
+ import { Skeleton } from "@/components/ui/skeleton";
+ 
+ const settingsSchema = z.object({
