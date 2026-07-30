@@ -5,8 +5,8 @@
  * Aqar Data Studio — Professional Real Estate Data Management Platform
  * OpenAPI spec version: 1.0.0
  */
-import type { BulkOperationInputOperation } from './bulkOperationInputOperation';
-import type { BulkOperationInputUpdates } from './bulkOperationInputUpdates';
+import type { BulkOperationInputOperation } from './bulkOperationInputOperation.js';
+import type { BulkOperationInputUpdates } from './bulkOperationInputUpdates.js';
 
 export interface BulkOperationInput {
   operation: BulkOperationInputOperation;

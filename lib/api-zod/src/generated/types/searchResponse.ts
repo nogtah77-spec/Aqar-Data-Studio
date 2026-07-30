@@ -5,7 +5,7 @@
  * Aqar Data Studio — Professional Real Estate Data Management Platform
  * OpenAPI spec version: 1.0.0
  */
-import type { SearchResult } from './searchResult';
+import type { SearchResult } from './searchResult.js';
 
 export interface SearchResponse {
   results: SearchResult[];

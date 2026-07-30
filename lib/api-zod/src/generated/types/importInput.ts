@@ -5,8 +5,8 @@
  * Aqar Data Studio — Professional Real Estate Data Management Platform
  * OpenAPI spec version: 1.0.0
  */
-import type { ImportedRow } from './importedRow';
-import type { ImportInputMode } from './importInputMode';
+import type { ImportedRow } from './importedRow.js';
+import type { ImportInputMode } from './importInputMode.js';
 
 export interface ImportInput {
   items: ImportedRow[];

@@ -5,9 +5,9 @@
  * Aqar Data Studio — Professional Real Estate Data Management Platform
  * OpenAPI spec version: 1.0.0
  */
-import type { ExportInputFilters } from './exportInputFilters';
-import type { ExportInputFormat } from './exportInputFormat';
-import type { ExportInputSortDir } from './exportInputSortDir';
+import type { ExportInputFilters } from './exportInputFilters.js';
+import type { ExportInputFormat } from './exportInputFormat.js';
+import type { ExportInputSortDir } from './exportInputSortDir.js';
 
 export interface ExportInput {
   format: ExportInputFormat;

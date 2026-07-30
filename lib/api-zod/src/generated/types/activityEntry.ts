@@ -5,7 +5,7 @@
  * Aqar Data Studio — Professional Real Estate Data Management Platform
  * OpenAPI spec version: 1.0.0
  */
-import type { ActivityEntryMeta } from './activityEntryMeta';
+import type { ActivityEntryMeta } from './activityEntryMeta.js';
 
 export interface ActivityEntry {
   id: string;

@@ -5,7 +5,7 @@
  * Aqar Data Studio — Professional Real Estate Data Management Platform
  * OpenAPI spec version: 1.0.0
  */
-import type { Property } from './property';
+import type { Property } from './property.js';
 
 export interface PropertyListResponse {
   data: Property[];
