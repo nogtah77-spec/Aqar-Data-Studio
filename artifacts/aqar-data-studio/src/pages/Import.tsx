@@ -137,13 +137,13 @@ function parseFileManual(file: File): Promise<ParsedData> {
     }
 
     const delimiter = ext === "tsv" ? "\t" : undefined;
-    Papa.parse(file, {
+    Papa.parse<Record<string, string>>(file, {
       header: true,
       skipEmptyLines: true,
       delimiter,
       complete: (result) => {
         const headers = result.meta.fields ?? [];
-        resolve({ headers, rows: result.data as Record<string, string>[], fileName: file.name, totalRows: result.data.length });
+        resolve({ headers, rows: result.data, fileName: file.name, totalRows: result.data.length });
       },
       error: (err) => reject(new Error("فشل تحليل الملف: " + err.message)),
     });

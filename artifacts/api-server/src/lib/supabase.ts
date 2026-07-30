@@ -1,6 +1,4 @@
 import { createClient } from "@supabase/supabase-js";
-// ws is needed as a WebSocket polyfill for Node.js < 22
-import WS from "ws";
 
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -15,15 +13,12 @@ if (!supabaseServiceKey) {
 /**
  * Admin Supabase client — uses service role key, bypasses RLS.
  * Only used server-side. Never expose to the frontend.
+ * Node.js 24 has native WebSocket — no polyfill needed.
  */
 export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
   auth: {
     autoRefreshToken: false,
     persistSession: false,
-  },
-  realtime: {
-    // Provide ws as the WebSocket transport for Node.js < 22
-    transport: WS as unknown as typeof WebSocket,
   },
 });
 
