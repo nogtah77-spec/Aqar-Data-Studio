@@ -1,72 +1,66 @@
 # Aqar Data Studio
 
-A bilingual (Arabic + English) real estate data management SaaS platform. Import-friendly, with full audit logging.
+A professional SaaS platform for real estate data management. Bilingual (Arabic + English), import-friendly, with a full audit trail.
 
 ## Tech Stack
 
-- **Frontend**: React 19 + Vite + TypeScript + TanStack Query (`artifacts/aqar-data-studio/`)
-- **Backend**: Express 5 + Node.js 24 (`artifacts/api-server/`)
-- **Database**: Supabase (PostgreSQL) + Supabase Auth
-- **UI**: Tailwind CSS v4 + shadcn/ui
-- **API Contract**: OpenAPI 3.1 (`lib/api-spec/openapi.yaml`) + Orval codegen
-
-## Running the Project
-
-Two workflows must be running simultaneously:
-
-| Workflow | Command | Port |
-|---|---|---|
-| `Aqar Data Studio` | `PORT=5173 BASE_PATH=/ pnpm --filter @workspace/aqar-data-studio run dev` | 5173 |
-| `API Server` | `PORT=8080 pnpm --filter @workspace/api-server run dev` | 8080 |
-
-The frontend proxies `/api` requests to port 8080 automatically (configured in `vite.config.ts`).
-
-## Environment Secrets Required
-
-Set these in Replit Secrets (Tools → Secrets):
-
-| Secret | Where to find it |
-|---|---|
-| `VITE_SUPABASE_URL` | Supabase dashboard → Settings → API → Project URL |
-| `VITE_SUPABASE_ANON_KEY` | Supabase dashboard → Settings → API → anon public key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase dashboard → Settings → API → service_role secret key |
-| `SESSION_SECRET` | Any random string (used for session signing) |
-
-## Database Migration
-
-On a fresh Supabase project, run the initial schema migration **once**:
-
-1. Open your Supabase dashboard → SQL Editor
-2. Copy the contents of `supabase/migrations/001_initial_schema.sql`
-3. Paste and run it
-
-This creates all tables (properties, regions, property_types, lookup_options, audit_logs, settings, etc.), indexes, RLS policies, and seed data.
-
-## Regenerating API Types
-
-After any change to `lib/api-spec/openapi.yaml`:
-
-```bash
-pnpm --filter @workspace/api-spec run codegen
-```
-
-This regenerates React Query hooks in `lib/api-client-react/` and Zod schemas in `lib/api-zod/`.
+- **Frontend**: React 19 + Vite + TypeScript + TanStack Query + shadcn/ui + Tailwind CSS v4
+- **Backend**: Express 5 + Node.js 20
+- **Database**: Supabase (PostgreSQL)
+- **Auth**: Supabase Auth
+- **API Contract**: OpenAPI 3.1 + Orval codegen
 
 ## Project Structure
 
 ```
 artifacts/
-  aqar-data-studio/   # React frontend (Vite, TanStack Query, shadcn/ui)
-  api-server/         # Express backend (service-role Supabase admin client)
+  aqar-data-studio/   # React frontend (port 5173, served at /)
+  api-server/         # Express backend (port 8080, served at /api)
+  property-studio/    # Property studio frontend (port 3001, served at /property-studio/)
 lib/
-  api-spec/           # OpenAPI spec — source of truth for all API contracts
-  api-client-react/   # Generated React Query hooks (do not edit manually)
-  api-zod/            # Generated Zod schemas (do not edit manually)
+  api-spec/           # OpenAPI spec (source of truth)
+  api-client-react/   # Generated React Query hooks (do not edit — run codegen)
+  api-zod/            # Generated Zod schemas (do not edit — run codegen)
 supabase/
-  migrations/         # Database schema SQL files
+  migrations/         # Database schema (run in Supabase SQL Editor)
 docs/                 # Architecture, database, import engine, roadmap docs
+```
+
+## How to Run
+
+All three services start automatically via the configured workflows:
+
+| Service | Workflow | Port |
+|---------|----------|------|
+| API server | `artifacts/api-server: API Server` | 8080 |
+| Frontend | `artifacts/aqar-data-studio: web` | 5173 |
+| Property Studio | `artifacts/property-studio: web` | 3001 |
+
+To start manually: `pnpm install` then run each workflow from the Workflows panel.
+
+## Required Secrets
+
+Set in Replit Secrets:
+
+| Key | Description |
+|-----|-------------|
+| `VITE_SUPABASE_URL` | Supabase project URL |
+| `VITE_SUPABASE_ANON_KEY` | Supabase anonymous/public API key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (backend only) |
+| `SESSION_SECRET` | Express session secret |
+
+## Database Setup
+
+Run `supabase/migrations/001_initial_schema.sql` in your Supabase project's SQL Editor to set up the schema.
+
+## Regenerating API Client
+
+If you change `lib/api-spec/openapi.yaml`, regenerate the client:
+
+```bash
+pnpm --filter @workspace/api-spec run codegen
 ```
 
 ## User Preferences
 
-- Use the dedicated Supabase project created for Aqar Data Studio — do not reuse any old project or credentials.
+- Do not create a new Supabase project or modify environment variables automatically — always ask the user first.
