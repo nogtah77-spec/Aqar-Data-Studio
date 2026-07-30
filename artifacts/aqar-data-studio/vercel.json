@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @workspace/aqar-data-studio run build",
+  "buildCommand": "pnpm install --frozen-lockfile && pnpm build"
   "outputDirectory": "dist/public",
   "installCommand": "pnpm install --frozen-lockfile",
   "framework": null,
