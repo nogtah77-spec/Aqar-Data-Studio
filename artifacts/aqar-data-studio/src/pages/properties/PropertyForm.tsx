@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useLocation } from "wouter";
 import {
   useGetProperty, useCreateProperty, useUpdateProperty,
-  useListRegions, useListPropertyTypes,
+  useListRegions, useListPropertyTypes, useListLookupOptions,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -316,8 +316,50 @@ export default function PropertyForm() {
     query: { enabled: isEdit, queryKey: ["property", params.id] },
   });
 
-  const { data: regions = [] } = useListRegions({ query: { queryKey: ["regions"] } });
-  const { data: types = [] }   = useListPropertyTypes({ query: { queryKey: ["property-types"] } });
+  const { data: regions = [] }    = useListRegions({ query: { queryKey: ["regions"] } });
+  const { data: types = [] }      = useListPropertyTypes({ query: { queryKey: ["property-types"] } });
+  const { data: finishingOpts = [] } = useListLookupOptions(
+    { category: "finishing" },
+    { query: { queryKey: ["lookup", "finishing"] } }
+  );
+  const { data: viewOpts = [] }   = useListLookupOptions(
+    { category: "view" },
+    { query: { queryKey: ["lookup", "view"] } }
+  );
+  const { data: categoryOpts = [] } = useListLookupOptions(
+    { category: "category" },
+    { query: { queryKey: ["lookup", "category"] } }
+  );
+  const { data: statusOpts = [] } = useListLookupOptions(
+    { category: "status" },
+    { query: { queryKey: ["lookup", "status"] } }
+  );
+
+  // Fallbacks if DB lookup options not yet seeded
+  const FALLBACK_CATEGORIES = [
+    { value: "sale", label: "للبيع" },
+    { value: "rent", label: "للإيجار" },
+    { value: "furnished", label: "مفروش" },
+    { value: "administrative", label: "إداري" },
+    { value: "medical", label: "طبي" },
+    { value: "commercial", label: "تجاري" },
+  ];
+  const FALLBACK_STATUS = [
+    { value: "active", label: "نشط" },
+    { value: "listed", label: "معروض" },
+    { value: "draft", label: "مسودة" },
+    { value: "sold", label: "مباعة" },
+    { value: "rented", label: "مؤجر" },
+    { value: "reserved", label: "محجوز" },
+  ];
+
+  const effectiveCategories = categoryOpts.filter((o: any) => o.active).length > 0
+    ? categoryOpts.filter((o: any) => o.active).map((o: any) => ({ value: o.value, label: o.label }))
+    : FALLBACK_CATEGORIES;
+
+  const effectiveStatuses = statusOpts.filter((o: any) => o.active).length > 0
+    ? statusOpts.filter((o: any) => o.active).map((o: any) => ({ value: o.value, label: o.label }))
+    : FALLBACK_STATUS;
 
   const createMutation = useCreateProperty();
   const updateMutation = useUpdateProperty();
@@ -470,9 +512,9 @@ export default function PropertyForm() {
                 <Select value={form.category} onValueChange={(v) => setForm((p) => ({ ...p, category: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="sale">للبيع</SelectItem>
-                    <SelectItem value="rent">للإيجار</SelectItem>
-                    <SelectItem value="investment">استثمار</SelectItem>
+                    {effectiveCategories.map((c) => (
+                      <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </Field>
@@ -480,10 +522,9 @@ export default function PropertyForm() {
                 <Select value={form.status} onValueChange={(v) => setForm((p) => ({ ...p, status: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">نشط</SelectItem>
-                    <SelectItem value="draft">مسودة</SelectItem>
-                    <SelectItem value="sold">مباع</SelectItem>
-                    <SelectItem value="rented">مؤجر</SelectItem>
+                    {effectiveStatuses.map((s) => (
+                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </Field>
@@ -538,10 +579,40 @@ export default function PropertyForm() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <Field label="التشطيب">
-                <Input placeholder="مثال: نص تشطيب، سوبر لوكس" value={form.finishing} onChange={set("finishing")} />
+                {finishingOpts.filter((o: any) => o.active).length > 0 ? (
+                  <Select
+                    value={form.finishing || "__none"}
+                    onValueChange={(v) => setForm((p) => ({ ...p, finishing: v === "__none" ? "" : v }))}
+                  >
+                    <SelectTrigger><SelectValue placeholder="اختر التشطيب" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none">— بدون —</SelectItem>
+                      {finishingOpts.filter((o: any) => o.active).map((o: any) => (
+                        <SelectItem key={o.id} value={o.value}>{o.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input placeholder="مثال: نص تشطيب، سوبر لوكس" value={form.finishing} onChange={set("finishing")} />
+                )}
               </Field>
               <Field label="الإطلالة">
-                <Input placeholder="مثال: بحري، حديقة" value={form.view} onChange={set("view")} />
+                {viewOpts.filter((o: any) => o.active).length > 0 ? (
+                  <Select
+                    value={form.view || "__none"}
+                    onValueChange={(v) => setForm((p) => ({ ...p, view: v === "__none" ? "" : v }))}
+                  >
+                    <SelectTrigger><SelectValue placeholder="اختر الإطلالة" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none">— بدون —</SelectItem>
+                      {viewOpts.filter((o: any) => o.active).map((o: any) => (
+                        <SelectItem key={o.id} value={o.value}>{o.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input placeholder="مثال: بحري، حديقة" value={form.view} onChange={set("view")} />
+                )}
               </Field>
             </div>
 
