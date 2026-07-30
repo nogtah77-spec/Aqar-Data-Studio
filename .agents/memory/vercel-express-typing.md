@@ -7,4 +7,4 @@ When Vercel type-checks a serverless API entrypoint together with the workspace,
 
 **Why:** Vercel's TypeScript resolution can combine Express and `@types/express` declarations differently from the local workspace, producing misleading `Express` and `Application` types without methods such as `.use`.
 
-**How to apply:** Keep relative imports NodeNext-compatible with `.js` extensions, and intersect `ReturnType<typeof express>` with a local `.use` signature before registering middleware.
+**How to apply:** Keep relative imports NodeNext-compatible with `.js` extensions, intersect `ReturnType<typeof express>` with a local `.use` signature before registering middleware, and avoid explicit `IRouter` annotations on routers when inference works.
