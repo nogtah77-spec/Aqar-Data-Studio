@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Upload, FileDown, AlertTriangle, CheckCircle2, XCircle,
   ChevronRight, ChevronLeft, RotateCcw, Info, Loader2,
-  FileSpreadsheet, FileText, Table2
+  FileSpreadsheet, FileText, Table2, Sparkles, Map,
 } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -15,10 +15,17 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import {
+  parseWorkbookBytes,
+  parseDelimitedText,
+  type ParsedProperty,
+  type SheetInfo,
+} from "@/lib/propertyImport";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type Step = "upload" | "map" | "settings" | "results";
+type ImportMode = "smart" | "manual";
 
 interface ParsedData {
   headers: string[];
@@ -70,54 +77,29 @@ const PROPERTY_FIELDS = [
 // ── Auto-detect column mapping from Arabic/English header names ────────────────
 
 const HEADER_ALIASES: Record<string, string> = {
-  // code
-  "الكود": "code", "كود": "code", "code": "code", "property_code": "code",
-  "رقم_العقار": "code", "رقم": "code",
-  // title
+  "الكود": "code", "كود": "code", "code": "code", "property_code": "code", "رقم_العقار": "code", "رقم": "code",
   "العنوان": "title", "عنوان": "title", "title": "title", "اسم": "title", "name": "title",
-  // price
   "السعر": "price", "سعر": "price", "price": "price", "الثمن": "price", "ثمن": "price",
-  // area
   "المساحة": "area", "مساحة": "area", "area": "area", "م2": "area", "sqm": "area",
-  // beds
   "غرف_النوم": "beds", "غرف": "beds", "beds": "beds", "bedrooms": "beds", "غرفة": "beds",
-  // baths
   "الحمامات": "baths", "حمامات": "baths", "baths": "baths", "bathrooms": "baths", "حمام": "baths",
-  // floors
   "عدد_الطوابق": "floors", "floors": "floors",
-  // floor
   "الدور": "floor", "دور": "floor", "floor": "floor",
-  // finishing
   "التشطيب": "finishing", "تشطيب": "finishing", "finishing": "finishing",
-  // view
   "الفيو": "view", "view": "view", "الاطلالة": "view", "إطلالة": "view",
-  // category
-  "الفئة": "category", "فئة": "category", "category": "category", "نوع_التعاقد": "category",
-  // status
+  "الفئة": "category", "فئة": "category", "category": "category",
   "الحالة": "status", "حالة": "status", "status": "status",
-  // region
   "المنطقة": "regionId", "منطقة": "regionId", "region_id": "regionId",
-  // type
   "النوع": "typeId", "نوع": "typeId", "type_id": "typeId",
-  // subArea
   "المنطقة_الفرعية": "subArea", "sub_area": "subArea", "الحي": "subArea", "حي": "subArea",
-  // unitType
   "نوع_الوحدة": "unitType", "unit_type": "unitType",
-  // floorText
   "الطابق_نصي": "floorText", "floor_text": "floorText",
-  // layout
   "التوزيع": "layout", "layout": "layout",
-  // source
   "المصدر": "source", "source": "source",
-  // description
   "الوصف": "description", "description": "description",
-  // location
   "الموقع": "location", "location": "location",
-  // videoUrl
   "رابط_الفيديو": "videoUrl", "video_url": "videoUrl",
-  // mapsUrl
   "رابط_الخريطة": "mapsUrl", "maps_url": "mapsUrl",
-  // featured
   "مميز": "featured", "featured": "featured",
 };
 
@@ -132,7 +114,7 @@ function autoDetectMapping(headers: string[]): Record<string, string> {
 
 // ── File parsing ──────────────────────────────────────────────────────────────
 
-function parseFile(file: File): Promise<ParsedData> {
+function parseFileManual(file: File): Promise<ParsedData> {
   return new Promise((resolve, reject) => {
     const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
 
@@ -143,10 +125,7 @@ function parseFile(file: File): Promise<ParsedData> {
           const data = e.target?.result;
           const wb = XLSX.read(data, { type: "binary" });
           const ws = wb.Sheets[wb.SheetNames[0]];
-          const json: Record<string, string>[] = XLSX.utils.sheet_to_json(ws, {
-            raw: false,
-            defval: "",
-          });
+          const json: Record<string, string>[] = XLSX.utils.sheet_to_json(ws, { raw: false, defval: "" });
           const headers = json.length > 0 ? Object.keys(json[0]) : [];
           resolve({ headers, rows: json, fileName: file.name, totalRows: json.length });
         } catch (err: any) {
@@ -157,20 +136,14 @@ function parseFile(file: File): Promise<ParsedData> {
       return;
     }
 
-    // CSV / TSV / TXT
-    const delimiter = ext === "tsv" ? "\t" : undefined; // undefined = auto-detect
+    const delimiter = ext === "tsv" ? "\t" : undefined;
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
       delimiter,
       complete: (result) => {
         const headers = result.meta.fields ?? [];
-        resolve({
-          headers,
-          rows: result.data as Record<string, string>[],
-          fileName: file.name,
-          totalRows: result.data.length,
-        });
+        resolve({ headers, rows: result.data as Record<string, string>[], fileName: file.name, totalRows: result.data.length });
       },
       error: (err) => reject(new Error("فشل تحليل الملف: " + err.message)),
     });
@@ -181,10 +154,7 @@ function parseFile(file: File): Promise<ParsedData> {
 
 const NUMERIC_FIELDS = new Set(["price", "area", "beds", "baths", "floors", "floor"]);
 
-function mapRowToImportRow(
-  row: Record<string, string>,
-  mapping: Record<string, string>
-): Record<string, any> {
+function mapRowToImportRow(row: Record<string, string>, mapping: Record<string, string>): Record<string, any> {
   const result: Record<string, any> = {};
   for (const [header, field] of Object.entries(mapping)) {
     if (field === "_skip") continue;
@@ -212,36 +182,39 @@ function getActionColor(action: string) {
 
 function getActionLabel(action: string) {
   const map: Record<string, string> = {
-    inserted: "أُضيف",
-    would_insert: "سيُضاف",
-    updated: "حُدِّث",
-    would_update: "سيُحدَّث",
-    skipped: "تجاوزه",
-    error: "خطأ",
+    inserted: "أُضيف", would_insert: "سيُضاف",
+    updated: "حُدِّث", would_update: "سيُحدَّث",
+    skipped: "تجاوزه", error: "خطأ",
   };
   return map[action] ?? action;
 }
 
 // ── Step indicator ────────────────────────────────────────────────────────────
 
-const STEPS = [
+const STEPS_MANUAL = [
   { key: "upload", label: "رفع الملف" },
   { key: "map", label: "ربط الأعمدة" },
   { key: "settings", label: "إعدادات الاستيراد" },
   { key: "results", label: "النتائج" },
 ];
 
-function StepIndicator({ current }: { current: Step }) {
-  const idx = STEPS.findIndex((s) => s.key === current);
+const STEPS_SMART = [
+  { key: "upload", label: "رفع الملف" },
+  { key: "settings", label: "مراجعة وإعدادات" },
+  { key: "results", label: "النتائج" },
+];
+
+function StepIndicator({ current, mode }: { current: Step; mode: ImportMode }) {
+  const steps = mode === "smart" ? STEPS_SMART : STEPS_MANUAL;
+  const idx = steps.findIndex((s) => s.key === current);
   return (
     <div className="flex items-center gap-1 overflow-x-auto pb-1">
-      {STEPS.map((s, i) => (
+      {steps.map((s, i) => (
         <div key={s.key} className="flex items-center gap-1 shrink-0">
           <div className={cn(
             "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
             i === idx ? "bg-primary text-primary-foreground" :
-            i < idx ? "bg-primary/20 text-primary" :
-            "bg-muted text-muted-foreground"
+            i < idx ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
           )}>
             <span className={cn(
               "w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0",
@@ -251,9 +224,7 @@ function StepIndicator({ current }: { current: Step }) {
             </span>
             <span className="hidden sm:inline">{s.label}</span>
           </div>
-          {i < STEPS.length - 1 && (
-            <ChevronRight className="w-3 h-3 text-muted-foreground shrink-0" />
-          )}
+          {i < steps.length - 1 && <ChevronRight className="w-3 h-3 text-muted-foreground shrink-0" />}
         </div>
       ))}
     </div>
@@ -263,9 +234,17 @@ function StepIndicator({ current }: { current: Step }) {
 // ── Download template ──────────────────────────────────────────────────────────
 
 function downloadTemplate() {
-  const headers = ["الكود", "العنوان", "السعر", "المساحة", "غرف_النوم", "الحمامات",
-    "التشطيب", "الفئة", "الحالة", "المنطقة_الفرعية", "الوصف"];
-  const csv = "\uFEFF" + headers.join(",") + "\n";
+  const headers = [
+    "الكود", "العنوان", "الوصف", "النوع", "المنطقة", "الفئة", "الحالة",
+    "السعر", "المساحة", "غرف_النوم", "الحمامات", "الدور", "التشطيب",
+    "الفيو", "المصدر", "مميز", "نوع_العرض", "رابط_الفيديو", "رابط_الخريطة", "رابط_خارجي",
+  ];
+  const exampleRow = [
+    "ALM-1001", "شقة فاخرة بمدينتي", "وصف مختصر للعقار", "شقة", "مدينتي",
+    "للبيع", "active", "2500000", "120", "3", "2", "4", "سوبر لوكس",
+    "بحري", "مباشر", "لا", "direct", "", "", "",
+  ];
+  const csv = "\uFEFF" + headers.join(",") + "\n" + exampleRow.join(",") + "\n";
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -275,12 +254,38 @@ function downloadTemplate() {
   URL.revokeObjectURL(url);
 }
 
+// ── Category / region badge helpers ───────────────────────────────────────────
+
+function categoryLabel(cat?: string) {
+  const m: Record<string, string> = {
+    sale: "بيع", rent: "إيجار", furnished: "مفروش",
+    administrative: "إداري", medical: "طبي", commercial: "تجاري",
+  };
+  return m[cat ?? ""] ?? cat ?? "بيع";
+}
+
+function categoryColor(cat?: string) {
+  if (cat === "rent") return "bg-blue-500/10 text-blue-700 border-blue-500/20";
+  if (cat === "furnished") return "bg-purple-500/10 text-purple-700 border-purple-500/20";
+  return "bg-green-500/10 text-green-700 border-green-500/20";
+}
+
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function Import() {
   const [step, setStep] = useState<Step>("upload");
+  const [importMode, setImportMode] = useState<ImportMode>("manual");
+
+  // Smart mode state
+  const [smartItems, setSmartItems] = useState<ParsedProperty[]>([]);
+  const [smartSheets, setSmartSheets] = useState<SheetInfo[]>([]);
+  const [unmappedHeaders, setUnmappedHeaders] = useState<string[]>([]);
+
+  // Manual mode state
   const [parsed, setParsed] = useState<ParsedData | null>(null);
   const [mapping, setMapping] = useState<Record<string, string>>({});
+
+  // Shared
   const [mode, setMode] = useState("merge");
   const [dryRun, setDryRun] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -288,15 +293,59 @@ export default function Import() {
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [currentFileName, setCurrentFileName] = useState("");
 
-  // ── File handling ──────────────────────────────────────────────────────────
+  // ── File handling ────────────────────────────────────────────────────────────
 
   const handleFile = useCallback(async (file: File) => {
     setError(null);
+    setCurrentFileName(file.name);
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+    const isExcel = ext === "xlsx" || ext === "xls";
+    const isText = ext === "csv" || ext === "tsv" || ext === "txt";
+
+    if (isExcel) {
+      // Try smart parse first
+      try {
+        const bytes = await file.arrayBuffer();
+        const result = parseWorkbookBytes(bytes);
+        if (result.items.length > 0) {
+          setSmartItems(result.items);
+          setSmartSheets(result.sheets);
+          setUnmappedHeaders(result.unmappedHeaders);
+          setImportMode("smart");
+          setStep("settings");
+          return;
+        }
+      } catch {
+        // Smart parse failed — fall through to manual
+      }
+    }
+
+    if (isText) {
+      // Try smart CSV parse
+      try {
+        const text = await file.text();
+        const result = parseDelimitedText(text);
+        if (result.items.length > 0) {
+          setSmartItems(result.items);
+          setSmartSheets(result.sheets);
+          setUnmappedHeaders(result.unmappedHeaders);
+          setImportMode("smart");
+          setStep("settings");
+          return;
+        }
+      } catch {
+        // Fall through to manual
+      }
+    }
+
+    // Fallback: manual mapping flow
     try {
-      const data = await parseFile(file);
+      const data = await parseFileManual(file);
       setParsed(data);
       setMapping(autoDetectMapping(data.headers));
+      setImportMode("manual");
       setStep("map");
     } catch (err: any) {
       setError(err.message);
@@ -315,20 +364,24 @@ export default function Import() {
     if (file) handleFile(file);
   }, [handleFile]);
 
-  // ── Import submission ──────────────────────────────────────────────────────
+  // ── Import submission ────────────────────────────────────────────────────────
 
   const handleImport = async () => {
-    if (!parsed) return;
     setLoading(true);
     setError(null);
     try {
-      const items = parsed.rows.map((row) => mapRowToImportRow(row, mapping));
-      const validItems = items.filter((item) => item.code);
+      let items: any[];
+      if (importMode === "smart") {
+        items = smartItems.filter((i) => i.code);
+      } else {
+        if (!parsed) return;
+        items = parsed.rows.map((row) => mapRowToImportRow(row, mapping)).filter((i) => i.code);
+      }
 
       const res = await fetch("/api/properties/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: validItems, mode, dryRun }),
+        body: JSON.stringify({ items, mode, dryRun }),
       });
 
       if (!res.ok) {
@@ -350,18 +403,23 @@ export default function Import() {
     setStep("upload");
     setParsed(null);
     setMapping({});
+    setSmartItems([]);
+    setSmartSheets([]);
+    setUnmappedHeaders([]);
     setResult(null);
     setError(null);
     setDryRun(true);
     setMode("merge");
+    setCurrentFileName("");
+    setImportMode("manual");
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // Check if code field is mapped
   const codeIsMapped = Object.values(mapping).includes("code");
   const previewRows = parsed?.rows.slice(0, 6) ?? [];
+  const totalSmartRows = smartItems.length;
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-5 max-w-5xl mx-auto">
@@ -379,7 +437,7 @@ export default function Import() {
       </div>
 
       {/* Step indicator */}
-      <StepIndicator current={step} />
+      <StepIndicator current={step} mode={importMode} />
 
       {/* Global error */}
       {error && (
@@ -422,7 +480,7 @@ export default function Import() {
                 ))}
               </div>
               <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); downloadTemplate(); }} className="gap-2">
-                <FileDown size={14} /> تحميل قالب CSV فارغ
+                <FileDown size={14} /> تحميل قالب CSV (مع مثال)
               </Button>
             </div>
           </div>
@@ -435,14 +493,25 @@ export default function Import() {
             onChange={onFileChange}
           />
 
-          {/* Tips */}
+          {/* Smart mode explanation */}
+          <div className="bg-primary/5 border border-primary/20 p-4 rounded-xl flex items-start gap-3 text-sm">
+            <Sparkles className="shrink-0 mt-0.5 text-primary" size={18} />
+            <div>
+              <p className="font-semibold mb-1 text-primary">الوضع الذكي — جديد!</p>
+              <ul className="list-disc list-inside space-y-1 text-xs text-muted-foreground">
+                <li>ملفات Excel متعددة الشيتات: يكشف المنطقة والفئة تلقائياً من اسم كل شيت.</li>
+                <li>الأعمدة العربية (النوع، الكود، التشطيب…) تُعرَّف تلقائياً دون ربط يدوي.</li>
+                <li>إذا لم يعمل الوضع الذكي، يتحول إلى ربط يدوي للأعمدة.</li>
+              </ul>
+            </div>
+          </div>
+
           <div className="bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-400 p-4 rounded-xl flex items-start gap-3 text-sm">
             <AlertTriangle className="shrink-0 mt-0.5" size={18} />
             <div>
               <p className="font-semibold mb-1.5">ملاحظات مهمة:</p>
               <ul className="list-disc list-inside space-y-1 text-xs">
                 <li>الحقل الإلزامي الوحيد هو: <strong>الكود</strong> — يجب أن يكون فريداً لكل عقار.</li>
-                <li>الأعمدة الأخرى اختيارية ويمكن ربطها يدوياً في الخطوة التالية.</li>
                 <li>ستتمكن من معاينة البيانات قبل الاستيراد الفعلي.</li>
               </ul>
             </div>
@@ -450,8 +519,8 @@ export default function Import() {
         </div>
       )}
 
-      {/* ── STEP 2: Column Mapping ── */}
-      {step === "map" && parsed && (
+      {/* ── STEP 2 (Manual): Column Mapping ── */}
+      {step === "map" && parsed && importMode === "manual" && (
         <div className="space-y-4">
           <Card>
             <CardHeader className="pb-3 border-b border-border/50">
@@ -471,9 +540,7 @@ export default function Import() {
                 </div>
                 {parsed.headers.map((header) => (
                   <div key={header} className="grid grid-cols-2 gap-x-4 items-center px-3 py-2 rounded-lg hover:bg-muted/20 transition-colors">
-                    <div className="text-sm font-medium truncate" title={header}>
-                      {header}
-                    </div>
+                    <div className="text-sm font-medium truncate" title={header}>{header}</div>
                     <Select
                       value={mapping[header] ?? "_skip"}
                       onValueChange={(val) => setMapping((prev) => ({ ...prev, [header]: val }))}
@@ -483,16 +550,13 @@ export default function Import() {
                       </SelectTrigger>
                       <SelectContent>
                         {PROPERTY_FIELDS.map((f) => (
-                          <SelectItem key={f.value} value={f.value} className="text-xs">
-                            {f.label}
-                          </SelectItem>
+                          <SelectItem key={f.value} value={f.value} className="text-xs">{f.label}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                 ))}
               </div>
-
               {!codeIsMapped && (
                 <div className="mt-4 bg-red-500/10 border border-red-500/20 text-red-700 p-3 rounded-lg text-xs flex items-center gap-2">
                   <XCircle size={14} />
@@ -514,9 +578,7 @@ export default function Import() {
                     <thead>
                       <tr className="bg-muted/30">
                         {parsed.headers.slice(0, 8).map((h) => (
-                          <th key={h} className="text-start px-3 py-2 font-semibold border-b border-border/50 whitespace-nowrap">
-                            {h}
-                          </th>
+                          <th key={h} className="text-start px-3 py-2 font-semibold border-b border-border/50 whitespace-nowrap">{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -538,9 +600,7 @@ export default function Import() {
           )}
 
           <div className="flex justify-between gap-3">
-            <Button variant="outline" onClick={reset} className="gap-2">
-              <ChevronLeft size={16} /> رجوع
-            </Button>
+            <Button variant="outline" onClick={reset} className="gap-2"><ChevronLeft size={16} /> رجوع</Button>
             <Button onClick={() => setStep("settings")} disabled={!codeIsMapped} className="gap-2">
               التالي <ChevronRight size={16} />
             </Button>
@@ -548,9 +608,86 @@ export default function Import() {
         </div>
       )}
 
-      {/* ── STEP 3: Import Settings ── */}
-      {step === "settings" && parsed && (
+      {/* ── STEP 2/3: Settings ── */}
+      {step === "settings" && (
         <div className="space-y-4">
+
+          {/* Smart mode: sheet summary */}
+          {importMode === "smart" && smartSheets.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3 border-b border-border/50">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Sparkles size={18} className="text-primary" />
+                  نتائج التحليل الذكي
+                  <Badge className="ms-auto text-xs">{totalSmartRows.toLocaleString("ar-EG")} عقار</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4 space-y-4">
+                {/* File name */}
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <FileSpreadsheet size={14} />
+                  <span className="font-medium text-foreground">{currentFileName}</span>
+                  <span>—</span>
+                  <span>{smartSheets.length} شيت</span>
+                </div>
+
+                {/* Per-sheet breakdown */}
+                <div className="grid gap-2">
+                  {smartSheets.map((s) => (
+                    <div key={s.name} className="flex items-center justify-between p-3 rounded-lg bg-muted/20 border border-border/40">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Map size={14} className="text-muted-foreground shrink-0" />
+                        <span className="text-sm font-medium truncate">{s.name}</span>
+                        {s.regionName && s.regionName !== s.name && (
+                          <span className="text-xs text-muted-foreground hidden sm:inline">← {s.regionName}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className={cn("px-2 py-0.5 rounded-full border text-[10px] font-medium", categoryColor(s.category))}>
+                          {categoryLabel(s.category)}
+                        </span>
+                        <span className="text-xs font-semibold text-muted-foreground">
+                          {s.count.toLocaleString("ar-EG")} عقار
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Unmapped headers warning */}
+                {unmappedHeaders.length > 0 && (
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-400">
+                    <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                    <span>
+                      أعمدة لم تُعرَّف (سيتم تجاهلها):{" "}
+                      {unmappedHeaders.map((h) => (
+                        <Badge key={h} variant="outline" className="me-1 text-[10px]">{h}</Badge>
+                      ))}
+                    </span>
+                  </div>
+                )}
+
+                {/* Preview first 4 items */}
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground mb-2">معاينة (أول 4 عقارات):</p>
+                  <div className="grid gap-1.5">
+                    {smartItems.slice(0, 4).map((item, i) => (
+                      <div key={i} className="flex items-center gap-3 text-xs p-2 rounded-lg bg-muted/10 border border-border/30">
+                        <span className="font-mono font-bold text-primary min-w-[80px] truncate">{item.code}</span>
+                        <span className="text-muted-foreground truncate flex-1">{item.subArea ?? item.regionName ?? "—"}</span>
+                        <span className="text-muted-foreground shrink-0">{item.area ? `${item.area}م²` : "—"}</span>
+                        <span className="font-medium shrink-0">
+                          {item.price ? item.price.toLocaleString("ar-EG") + " ج.م" : "—"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Import settings card */}
           <Card>
             <CardHeader className="pb-3 border-b border-border/50">
               <CardTitle className="text-base">إعدادات الاستيراد</CardTitle>
@@ -599,8 +736,10 @@ export default function Import() {
               <div className="flex items-start gap-3 p-4 rounded-xl bg-secondary/10 border border-secondary/20 text-sm">
                 <Info size={16} className="text-secondary shrink-0 mt-0.5" />
                 <div className="text-secondary-foreground/80">
-                  <span className="font-semibold">{parsed.totalRows.toLocaleString("ar-EG")} صف</span> من{" "}
-                  <span className="font-semibold">{parsed.fileName}</span> جاهزة للمعالجة بوضع{" "}
+                  <span className="font-semibold">
+                    {(importMode === "smart" ? totalSmartRows : parsed?.totalRows ?? 0).toLocaleString("ar-EG")} صف
+                  </span>{" "}
+                  من <span className="font-semibold">{currentFileName || parsed?.fileName}</span> جاهزة بوضع{" "}
                   <span className="font-semibold">
                     {mode === "merge" ? "الدمج" : mode === "insert" ? "الإضافة" : "التحديث"}
                   </span>
@@ -611,7 +750,7 @@ export default function Import() {
           </Card>
 
           <div className="flex justify-between gap-3">
-            <Button variant="outline" onClick={() => setStep("map")} className="gap-2">
+            <Button variant="outline" onClick={() => importMode === "smart" ? reset() : setStep("map")} className="gap-2">
               <ChevronLeft size={16} /> رجوع
             </Button>
             <Button onClick={handleImport} disabled={loading} className="gap-2 min-w-[140px]">
@@ -628,7 +767,6 @@ export default function Import() {
       {/* ── STEP 4: Results ── */}
       {step === "results" && result && (
         <div className="space-y-4">
-          {/* Summary cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
               { label: "أُضيف", value: result.added, color: "text-green-600", bg: "bg-green-500/10" },
@@ -659,7 +797,6 @@ export default function Import() {
             </div>
           )}
 
-          {/* Details table */}
           {result.details.length > 0 && (
             <Card>
               <CardHeader className="pb-3 border-b border-border/50">
