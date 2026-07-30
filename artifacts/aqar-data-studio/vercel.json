@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pnpm install --frozen-lockfile && pnpm build",
+  "buildCommand": "(cd ../.. && pnpm run typecheck:libs) && pnpm build",
   "outputDirectory": "dist/public",
   "installCommand": "pnpm install --frozen-lockfile",
   "framework": null,
