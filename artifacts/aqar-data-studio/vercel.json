@@ -1,5 +1,5 @@
 {
-  "buildCommand": "(cd ../.. && pnpm run typecheck:libs && pnpm --filter @workspace/aqar-data-studio run build)",
+  "buildCommand": "(cd ../.. && pnpm run typecheck:libs && pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/aqar-data-studio run build)",
   "outputDirectory": "dist/public",
   "installCommand": "pnpm install --frozen-lockfile",
   "framework": null,
