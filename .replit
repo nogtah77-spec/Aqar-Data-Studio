@@ -24,6 +24,10 @@ args = "artifacts/api-server: API Server"
 task = "workflow.run"
 args = "artifacts/aqar-data-studio: web"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "artifacts/property-studio: web"
+
 [[workflows.workflow]]
 name = "artifacts/api-server: API Server"
 author = "agent"
@@ -44,6 +48,18 @@ author = "agent"
 task = "shell.exec"
 args = "PORT=5173 BASE_PATH=/ pnpm --filter @workspace/aqar-data-studio run dev"
 waitForPort = 5173
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[workflows.workflow]]
+name = "artifacts/property-studio: web"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "PORT=3001 BASE_PATH=/property-studio/ pnpm --filter @workspace/property-studio run dev"
+waitForPort = 3001
 
 [workflows.workflow.metadata]
 outputType = "webview"
