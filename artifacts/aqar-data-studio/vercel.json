@@ -1,5 +1,5 @@
 {
-  "buildCommand": "printf '%s\\n' 'Vercel health route source:' && sed -n '1,10p' ../api-server/src/routes/health.ts && grep -q '(_req: Request, res: Response)' ../api-server/src/routes/health.ts && (cd ../.. && pnpm run typecheck:libs) && pnpm build",
+  "buildCommand": "(cd ../.. && pnpm run typecheck:libs && pnpm --filter @workspace/aqar-data-studio run build)",
   "outputDirectory": "dist/public",
   "installCommand": "pnpm install --frozen-lockfile",
   "framework": null,
