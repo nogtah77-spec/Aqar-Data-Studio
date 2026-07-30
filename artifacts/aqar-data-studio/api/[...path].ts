@@ -14,6 +14,6 @@
  *   VITE_SUPABASE_URL         Supabase project URL  (same value used by the frontend)
  *   SUPABASE_SERVICE_ROLE_KEY Supabase service-role secret  (server-side only, never exposed to browser)
  */
-import app from "../../api-server/src/app.js";
+import app from "../../api-server/src/app";
 
 export default app;
