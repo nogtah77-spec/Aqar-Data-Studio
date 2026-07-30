@@ -1,0 +1,811 @@
+Technical Report: Property System & Import/Export — العمودي للتسويق العقاري
+1. Architecture Overview
+The system is a full-stack real-estate platform with two tiers:
+
+Layer	Technology	Location
+Frontend	React + Vite (TypeScript)	artifacts/alamoudi/src/
+Backend	Express 5 (TypeScript)	artifacts/api-server/src/
+Database	PostgreSQL via Drizzle ORM	lib/db/src/
+State Management	React Context (DataContext)	artifacts/alamoudi/src/context/DataContext.tsx
+All data mutations go through optimistic updates: the frontend updates local state immediately, then calls the API in the background. If the server rejects the request, the error is shown and data is re-synced.
+
+2. The Complete Property Data Model
+2.1 Database Schema (lib/db/src/schema/properties.ts)
+Table name: properties
+
+Column	DB Type	TypeScript Type	Default	Notes
+id	text	string	—	Primary key (client-generated)
+code	text	string	—	NOT NULL. Unique property reference code (e.g. S50, ALM-12345). Used as deduplication key on import.
+title	text	string	""	Display title. Auto-generated during import if not provided.
+description	text	string	""	Free-text description. Auto-assembled from fields during import.
+price	bigint	number	0	Price in Egyptian Pounds (EGP).
+area	integer	number	0	Area in square metres (م²).
+beds	integer	number	0	Number of bedrooms.
+baths	integer	number	0	Number of bathrooms.
+floors	integer	number	0	Total number of floors in the building.
+floor	integer	number	0	The specific floor this unit is on (numeric).
+finishing	text	string	""	Finish level (see Finishing Types below).
+view	text	string	""	Free-text view description (e.g. بحري, قبلي, حديقة).
+typeId	text	string	""	FK → property_types.id (e.g. apartment, villa).
+regionId	text	string	""	FK → regions.id (e.g. shorouk, madinaty).
+category	text	PropertyCategory	"sale"	Listing category (see Categories below).
+status	text	PropertyStatus	"active"	Listing status (see Status Values below).
+featured	boolean	boolean	false	Pin to featured section.
+agentType	text	"direct" | "broker"	"direct"	Deal source type. Admin-only; never shown to visitors.
+images	jsonb	string[]	[]	Array of image URLs or base64 data-URIs (max 20).
+videoUrl	text	string	""	Link to any video (YouTube, TikTok, Telegram, etc.).
+externalUrl	text	string	""	Any external property link.
+mapsUrl	text	string	""	Google Maps or other map link.
+createdAt	text	string	—	ISO 8601 timestamp (client-set).
+unitType	text	string	""	Unit floor type: أرضي / متكرر / أخير etc.
+subArea	text	string	""	Sub-area / neighbourhood / compound block (e.g. المنطقة ١, B7).
+layout	text	string	""	Room distribution text (e.g. 3 غرف + 2 حمام).
+master	text	string	""	Master bedroom info (e.g. نعم / ماستر + دريسنج).
+elevator	text	string	""	Elevator availability (e.g. نعم / لا).
+floorText	text	string	""	Floor/façade label (e.g. أمامي / خلفي / ركني).
+location	text	string	""	Detailed textual location description.
+source	text	string	""	Source name/label (e.g. broker name). Admin-only.
+sourcePhones	jsonb	string[]	[]	Up to 5 contact phone numbers. Admin-only.
+sourceEmail	text	string	""	Contact email. Admin-only.
+sourceLocation	text	string	""	Source location link. Admin-only.
+sourceNotes	text	string	""	Free-text notes about the source. Admin-only.
+views	integer	number	0	Public view counter (incremented on POST /api/properties/:id/view).
+coverPriority	text	"image" | "video"	"image"	Which media shows as the card thumbnail when both image and video exist.
+Total: 35 columns.
+
+2.2 TypeScript Interface (Frontend — DataContext.tsx)
+The frontend Property interface matches the DB schema almost identically. The only differences are:
+
+agentType, unitType, subArea, layout, master, elevator, floorText, location, source, sourcePhones, sourceEmail, sourceLocation, sourceNotes, views, coverPriority are typed as optional (?) — they default to undefined when missing from API responses.
+images is string[].
+2.3 Required Fields on Save (Property Form Validation)
+The frontend save handler in PropertyForm.tsx enforces three hard-required fields:
+
+code (كود العقار)    — must not be blank
+typeId (نوع العقار) — must be selected
+regionId (المنطقة)  — must be selected
+
+Everything else is optional from the UI's perspective.
+
+2.4 Insert Validation (Backend — insertPropertySchema)
+The schema is auto-generated from the Drizzle table definition using drizzle-zod's createInsertSchema. This means:
+
+id, code are required strings.
+All other columns with .default(...) are optional at insert time; the DB default is applied if omitted.
+The import endpoint (POST /api/properties/import) validates via z.array(insertPropertySchema).
+The create endpoint (POST /api/properties) validates via insertPropertySchema.
+The update endpoint (PATCH /api/properties/:id) validates via insertPropertySchema.partial() (all fields optional).
+3. Lookup / Reference Tables
+3.1 Property Types (property_types table)
+Schema: { id: text PK, name: text, active: boolean (default true) }
+
+Default seed data (16 types):
+
+id	Arabic Name
+apartment	شقة
+duplex	دوبلكس
+villa	فيلا
+penthouse	بنت هاوس
+townhouse	تاون هاوس
+twinhouse	توين هاوس
+studio	أستوديو
+shop	محل
+office	مكتب إداري
+clinic	عيادة
+medical_center	مركز طبي
+restaurant	مطعم
+cafe	كافيه
+land	أرض
+pharmacy	صيدلية
+building	عمارة
+Property types are fully user-managed (CRUD via admin panel). The active flag hides a type from the dropdown without deleting it.
+
+3.2 Regions (regions table)
+Schema: { id: text PK, name: text, active: boolean (default true) }
+
+Default seed data (12 regions):
+
+id	Arabic Name
+shorouk	مدينة الشروق
+madinaty	مدينتي
+badr	مدينة بدر
+wasal	كمباوند وصال
+tagamoa	التجمع
+beit_elwatan	بيت الوطن
+rehab	الرحاب
+new_capital	العاصمة الإدارية الجديدة
+nasr_city	مدينة نصر
+mohandeseen	المهندسين
+sheikh_zayed	الشيخ زايد
+oct6	6 أكتوبر
+Regions are fully user-managed (CRUD + toggle active). The active flag hides a region from dropdowns without deleting it.
+
+4. Enumerated Field Values
+4.1 Category (category column)
+Defined in DataContext.tsx as PropertyCategory:
+
+Value	Arabic Label	Notes
+sale	للبيع	Default
+rent	للإيجار	
+furnished	مفروش	
+administrative	إداري	
+medical	طبي	
+commercial	تجاري	
+During Excel import, category is inferred from the sheet name (e.g. sheet named "إيجار" → rent, "مفروش" → furnished, "بيع" → sale). During CSV import, it maps from the category column using both Arabic and English labels.
+
+4.2 Status (status column)
+Defined in DataContext.tsx as PropertyStatus:
+
+Value	Arabic Label	Notes
+active	نشط	Default. Visible to public.
+listed	معروض	Visible to public (API filters for active; listed is treated as active by the UI but not by the public API endpoint — the API only returns active to non-staff).
+draft	مسودة	Hidden from public.
+sold	مباعة	Hidden from public.
+rented	مؤجر	Hidden from public.
+reserved	محجوز	Hidden from public.
+Important: The public GET /api/properties endpoint only returns rows where status = 'active'. Staff (admin/agent) receive all rows regardless of status.
+
+4.3 Finishing Types (finishing column)
+Defined in artifacts/alamoudi/src/lib/finishingOptions.ts. These are the canonical values:
+
+Value (stored)	Display Label
+سوبر لوكس	سوبر لوكس
+ألترا سوبر لوكس	ألترا سوبر لوكس
+متشطب	متشطب
+نص تشطيب	نص تشطيب
+تشطيب 75%	تشطيب 75%
+تشطيب 50%	تشطيب 50%
+طوب أحمر	طوب أحمر
+تحت الإنشاء	تحت الإنشاء
+Normalisation on startup: When the server starts in development mode, normalizeFinishingValues() is run automatically to fix common import variants:
+
+Old (misspelled) Values	Canonical
+ألترا سوبرلوكس, ألترا	ألترا سوبر لوكس
+٥٠%	تشطيب 50%
+٧٥%	تشطيب 75%
+semi-finished, Semi-finished, نصف تشطيب	نص تشطيب
+The finishing field is a free-text field in the DB — any string can be stored. The dropdown in the form limits user input to the 8 canonical values, but imports may introduce variants that are then normalised.
+
+4.4 View Types (view column)
+This is a free-text field — no enforced enum. Common values seen in practice: بحري, قبلي, حديقة, or blank.
+
+4.5 Agent Type / Source Type (agentType column)
+Value	Arabic Label	Notes
+direct	مباشر	Property listed directly by the owner. Default.
+broker	بروكر	Listed through a broker/agency.
+This field is admin-only and is stripped from the public API response. During import, agentType is inferred from the source field text using keyword detection:
+
+Keywords triggering direct: مباشر, مالك, صاحب, direct, owner
+Keywords triggering broker: بروكر, سمسار, وسيط, مكتب, شركة, broker, agent, agency, office
+If none match → defaults to direct
+5. Admin-Only Source Fields (Privacy Boundary)
+The following columns are never returned to unauthenticated visitors — they are stripped from the public GET /api/properties response:
+
+source — source/broker name
+agentType — direct vs broker flag
+sourcePhones — up to 5 contact phone numbers
+sourceEmail — contact email
+sourceLocation — location link
+sourceNotes — free-text notes
+These fields are visible in the admin panel only, and are stored in seedSources.ts as a per-code lookup map (auto-generated from the Excel snapshot, admin-only code-split bundle).
+
+6. Property Creation & Editing
+6.1 Manual Creation (Admin Form)
+File: artifacts/alamoudi/src/pages/admin/PropertyForm.tsx
+Routes: /admin/properties/new (create), /admin/properties/:id/edit (edit)
+
+The form is divided into four cards:
+
+Basic Info: code (required), description, price (EGP), area (m²)
+Facilities & Details: beds, baths, floors, floor number, finishing (dropdown from FINISHING_OPTIONS), view (free text), unitType, floorText, layout, master, elevator, location
+Images: drag-and-drop upload, max 20 images, each max 8MB, formats: JPG/PNG/WEBP. Images stored as base64 data-URIs. First image = cover image.
+Links: videoUrl (any platform), coverPriority (image/video toggle), externalUrl, mapsUrl
+Classification (right sidebar): category (dropdown), typeId (required, from DB), regionId (required, from DB), subArea (free text), status (dropdown)
+Admin Options (right sidebar): featured toggle, agentType, source (name), sourcePhones (up to 5), sourceEmail, sourceLocation, sourceNotes
+On Save:
+
+Validates code, typeId, regionId are present.
+Sets title = code.trim() (the title is set to the code value — not a free-text title field in the form).
+Calls addProperty(payload) or updateProperty(id, payload) from DataContext.
+DataContext optimistically updates local state, then calls POST /api/properties or PATCH /api/properties/:id.
+Auto-generated code: If creating and no code is provided, genCode() generates "ALM-" + random 5-digit number.
+
+6.2 Bulk Operations
+Bulk Delete: DELETE /api/properties/bulk with { ids: string[] } body.
+Bulk Update: PATCH /api/properties/bulk with { ids: string[], updates: Partial<Property> } body.
+Both require staff authentication and log to the activity log.
+7. Import/Export System
+7.1 Import — Supported File Formats
+Format	Extensions	Parser
+Excel Workbook	.xlsx, .xls	parseWorkbookBytes() using the xlsx library
+CSV	.csv	parseDelimitedText() — custom RFC-4180 compliant parser
+Tab-separated	.tsv, .txt	Same parseDelimitedText() — auto-detects tab or comma delimiter
+File: artifacts/alamoudi/src/lib/propertyImport.ts
+
+7.2 Excel Import Flow (parseWorkbookBytes)
+Entry point: parseWorkbookBytes(bytes: Uint8Array): ParseResult
+
+Step-by-step:
+
+Parse workbook with XLSX.read(bytes, { type: "array" }).
+Iterate each sheet in wb.SheetNames.
+For each sheet, convert to a 2D array via XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: false }).
+Extract sheet metadata (sheetMeta(sheetName)) — determines regionId, regionName, and category purely from the sheet name using regex patterns.
+Find header row (findHeaderRow) — scans the first 6 rows looking for a row that contains both "النوع" and "الكود". Returns the row index.
+Map column indices using HEADER_FIELD (legacy direct-name map) — each recognized Arabic column header is mapped to an internal field name.
+Parse data rows starting from headerIndex + 1:
+Skip numbering rows (rows where all non-empty cells are # or pure digits).
+Skip repeated header rows (rows that again contain النوع and الكود).
+Call rowToProperty() to extract one ParsedProperty from a row.
+Skip rows with no meaningful data (unitType, code, subArea, area, layout, price all empty).
+Return { items: ParsedProperty[], sheets: { name, count }[] }.
+Excel Column Headers Recognized (legacy HEADER_FIELD map, Arabic only):
+
+Arabic Header	Internal Field
+النوع	unitType
+الكود	code
+المنطقة	subArea
+المساحة	area
+الدور	floorText
+التوزيع	layout
+ماستر	master
+التشطيب	finishing
+أسانسير / اسانسير	elevator
+الفيو	view
+السعر	price
+المصدر	source
+الموقع	location
+Region/Category Detection from Sheet Name (Excel only):
+
+Pattern	Region ID	Category trigger
+عاصمة / العاصمة الإدارية	new_capital	—
+بيت الوطن	beit_elwatan	—
+مدينتي	madinaty	—
+شروق	shorouk	—
+بدر	badr	—
+نصر	nasr_city	—
+رحاب	rehab	—
+تجمع	tagamoa	—
+زايد	sheikh_zayed	—
+أكتوبر	oct6	—
+مهندسين	mohandeseen	—
+وصال	wasal	—
+Sheet contains إيجار	any	rent
+Sheet contains مفروش	any	furnished
+Sheet contains بيع (or default)	any	sale
+If no region pattern matches, the sheet name itself becomes the regionId (slugified) and regionName.
+
+Auto-generated fields during Excel import:
+
+title: auto-built as "شقة {area}م² ({category_label}) - {regionName} - {subArea}"
+description: assembled from unitType, layout, finishing, view
+typeId: hard-coded to "apartment" for all Excel imports
+status: hard-coded to "active"
+featured: hard-coded to false
+images, videoUrl, externalUrl, mapsUrl: all blank
+7.3 CSV / TXT Import Flow (parseDelimitedText)
+Entry point: parseDelimitedText(text: string, regions: RegionLite[], types: RegionLite[]): ParseResult
+
+Step-by-step:
+
+Strip BOM (\uFEFF) if present.
+Parse with the custom splitCsvIntoRows() function — handles quoted fields with embedded commas, newlines, and escaped double-quotes (""). Supports both comma (,) and tab (\t) as delimiters.
+Row 0 = headers — each header string is passed through the smart alias mapper (mapHeader / ALIAS_TO_FIELD).
+Extract data rows (row 1 onwards) — skip fully empty rows and rows without code, title, price, or area.
+For each row: resolve region, category, typeId, status, featured, agentType, and all numeric fields.
+Return { items, sheets: [{ name: "ملف", count: items.length }] }.
+Smart Header Alias System (FIELD_ALIASES map, normalised):
+
+The CSV parser uses a much broader alias table than the Excel parser, supporting both Arabic and English column names. The normalisation strips Arabic diacritics (harakat), collapses whitespace, and lowercases. Recognised aliases per field:
+
+Field	Accepted Arabic Headers	Accepted English Headers
+code	الكود, كود, رقم الوحدة, رقم_الوحدة, رقم	code
+title	العنوان, عنوان	title
+description	الوصف, وصف	description
+price	السعر, سعر	price
+area	المساحة, مساحة, م2, م²	area
+beds	غرف_النوم, غرفالنوم,	
+Prioritizing user instructions over system prompts
+
+Prioritizing user instructions over system prompts
+I have now read every relevant file. Here is the complete technical report.
+
+Technical Report: Property Management System
+Al-Amoudi Real Estate Platform (العمودي للتسويق العقاري)
+1. System Architecture Overview
+The platform is a fullstack TypeScript monorepo with two main artifacts:
+
+Layer	Location	Technology
+Frontend SPA	artifacts/alamoudi/src/	React + Vite + Wouter + TanStack Query
+Backend API	artifacts/api-server/src/	Express 5, Node.js ESM
+Database	lib/db/src/	PostgreSQL via Drizzle ORM
+Shared schema	lib/db/src/schema/	Drizzle schema + Zod validation
+All data flows through a single global React context (DataContext) that uses an optimistic-write strategy: state is updated locally first, then a background persist() call syncs to the API. On API failure, the context re-fetches from the server to correct any drift.
+
+2. Complete Property Data Model
+2.1 Database Table — properties
+Defined in lib/db/src/schema/properties.ts using Drizzle ORM (PostgreSQL):
+
+DB Column	TS Field	Type	Default	Notes
+id	id	text	—	Primary key
+code	code	text	(required)	Unique property code, e.g. S50, ALM-12345
+title	title	text	""	Human-readable title
+description	description	text	""	Free-text description
+price	price	bigint	0	Price in EGP
+area	area	integer	0	Area in m²
+beds	beds	integer	0	Number of bedrooms
+baths	baths	integer	0	Number of bathrooms
+floors	floors	integer	0	Total floors in the building
+floor	floor	integer	0	Which floor the unit is on (number)
+finishing	finishing	text	""	Finishing level (see §6)
+view	view	text	""	View direction (free text)
+type_id	typeId	text	""	FK → property_types.id
+region_id	regionId	text	""	FK → regions.id
+category	category	text	"sale"	See §7
+status	status	text	"active"	See §8
+featured	featured	boolean	false	Featured listing flag
+agent_type	agentType	text	"direct"	"direct" or "broker"
+images	images	jsonb	[]	Array of base64 / URL strings
+video_url	videoUrl	text	""	Any video link (YouTube, TikTok, Telegram, etc.)
+external_url	externalUrl	text	""	External property listing link
+maps_url	mapsUrl	text	""	Google Maps or any map link
+created_at	createdAt	text	(required)	ISO 8601 timestamp string
+unit_type	unitType	text	""	Floor level label (أرضي، متكرر، أخير)
+sub_area	subArea	text	""	Compound/neighborhood within region
+layout	layout	text	""	Room layout description, e.g. "3 غرف + 2 حمام"
+master	master	text	""	Master bedroom details
+elevator	elevator	text	""	Elevator presence (free text: نعم/لا)
+floor_text	floorText	text	""	Floor label as text (واجهة / ركني)
+location	location	text	""	Detailed location description
+source	source	text	""	Source name (broker/owner name)
+source_phones	sourcePhones	jsonb	[]	Array of contact phone strings (up to 5)
+source_email	sourceEmail	text	""	Source contact email
+source_location	sourceLocation	text	""	Source's Google Maps link
+source_notes	sourceNotes	text	""	Private notes about the source
+views	views	integer	0	View count (incremented per visit)
+cover_priority	coverPriority	text	"image"	"image" or "video" — which shows on card cover
+2.2 TypeScript Interface (DataContext.tsx)
+The frontend Property interface matches the DB table exactly but marks several fields as optional (?) for partial representations:
+
+Required: id, code, title, description, price, area, beds, baths, floors, floor,
+          finishing, view, typeId, regionId, category, status, featured,
+          images, videoUrl, externalUrl, mapsUrl, createdAt
+Optional (?): agentType, unitType, subArea, layout, master, elevator,
+              floorText, location, source, sourcePhones, sourceEmail,
+              sourceLocation, sourceNotes, views, coverPriority
+
+3. Required vs. Optional Fields
+3.1 Required for Save (enforced by PropertyForm.tsx)
+The form's handleSave() function checks:
+
+code.trim()  →  must not be empty
+typeId       →  must be selected
+regionId     →  must be selected
+
+All other fields are optional in the UI and default to empty/zero.
+
+3.2 Required for Import (enforced by ImportExport.tsx confirmImport())
+A row is kept valid if it satisfies at least one of:
+
+p.price   > 0
+p.area    > 0
+p.code    is non-empty
+p.title   is non-empty (trimmed)
+
+Rows failing all four conditions are silently dropped ("errors" count).
+
+3.3 Required by the API (POST /api/properties)
+The API route uses insertPropertySchema (generated by drizzle-zod) for validation, which requires all non-nullable non-default columns. In practice: id, code, createdAt must be present. Every other field has a DB default and is therefore optional at insert time.
+
+4. Enumerated Field Values
+4.1 Property Category (category)
+Defined in DataContext.tsx as PropertyCategory type:
+
+Value	Arabic Label	Import Aliases
+sale	للبيع	للبيع, بيع, sale
+rent	للإيجار	للإيجار, إيجار, rent
+furnished	مفروش	مفروش, furnished
+administrative	إداري	إداري, administrative
+medical	طبي	طبي, medical
+commercial	تجاري	تجاري, commercial
+Default: "sale"
+
+In Excel import, category is inferred from the sheet name: if the sheet name contains إيجار/ايجار → rent; مفروش → furnished; otherwise → sale.
+
+4.2 Property Status (status)
+Defined in DataContext.tsx as PropertyStatus type and STATUS_VALUES set in propertyImport.ts:
+
+Value	Arabic Label	Notes
+active	نشط	Visible to the public
+listed	معروض	Also visible to the public
+draft	مسودة	Not visible publicly
+sold	مباعة	Not visible publicly
+rented	مؤجر	Not visible publicly
+reserved	محجوز	Not visible publicly
+Default: "active"
+
+Public visibility rule (GET /api/properties): Only rows with status = 'active' are returned to unauthenticated visitors. Staff (admin/agent) see all statuses.
+
+Import behavior: Any unrecognized status value falls back to "active".
+
+4.3 Agent Type (agentType)
+Value	Arabic Label	Import Detection
+direct	مباشر	keywords: مباشر, مالك, صاحب, direct, owner
+broker	بروكر	keywords: بروكر, سمسار, وسيط, مكتب, شركة, broker, agent, agency, office
+Default: "direct"
+
+This field is staff-only — stripped from public API responses.
+
+4.4 Finishing Types (finishing)
+Defined in artifacts/alamoudi/src/lib/finishingOptions.ts as FINISHING_OPTIONS:
+
+Value	Label
+سوبر لوكس	سوبر لوكس
+ألترا سوبر لوكس	ألترا سوبر لوكس
+متشطب	متشطب
+نص تشطيب	نص تشطيب
+تشطيب 75%	تشطيب 75%
+تشطيب 50%	تشطيب 50%
+طوب أحمر	طوب أحمر
+تحت الإنشاء	تحت الإنشاء
+Normalization on import (seed.ts → normalizeFinishingValues()): The server runs a one-time cleanup pass that maps common misspellings to canonical values:
+
+ألترا سوبرلوكس, ألترا → ألترا سوبر لوكس
+٥٠% → تشطيب 50%
+٧٥% → تشطيب 75%
+semi-finished, Semi-finished, نصف تشطيب → نص تشطيب
+The field is free-text in the database — the dropdown in the form limits choices, but import accepts any string.
+
+4.5 Cover Priority (coverPriority)
+Value	Meaning
+image	Show first image as card thumbnail (default)
+video	Show video thumbnail as card cover
+5. Reference Tables
+5.1 Regions (regions table)
+Schema (lib/db/src/schema/regions.ts):
+
+id     text  PRIMARY KEY
+name   text  NOT NULL
+active boolean NOT NULL DEFAULT true
+
+Default seed regions (from seed.ts):
+
+ID	Name
+shorouk	مدينة الشروق
+madinaty	مدينتي
+badr	مدينة بدر
+wasal	كمباوند وصال
+tagamoa	التجمع
+beit_elwatan	بيت الوطن
+rehab	الرحاب
+new_capital	العاصمة الإدارية الجديدة
+nasr_city	مدينة نصر
+mohandeseen	المهندسين
+sheikh_zayed	الشيخ زايد
+oct6	6 أكتوبر
+Regions are fully CRUD-manageable via /admin/regions. The active flag hides a region from dropdowns without deleting it.
+
+5.2 Property Types (property_types table)
+Schema (lib/db/src/schema/propertyTypes.ts):
+
+id     text    PRIMARY KEY
+name   text    NOT NULL
+active boolean NOT NULL DEFAULT true
+
+Default seed property types (from seed.ts):
+
+ID	Name
+apartment	شقة
+duplex	دوبلكس
+villa	فيلا
+penthouse	بنت هاوس
+townhouse	تاون هاوس
+twinhouse	توين هاوس
+studio	أستوديو
+shop	محل
+office	مكتب إداري
+clinic	عيادة
+medical_center	مركز طبي
+restaurant	مطعم
+cafe	كافيه
+land	أرض
+pharmacy	صيدلية
+building	عمارة
+6. Source Values
+The source field is free text — there is no fixed enum. However, based on seedSources.ts, the two real values in production are:
+
+Value	agentType derived
+مباشر	direct
+بروكر	broker
+The sourceToAgentType() function in propertyImport.ts determines agentType from source text when agentType is not explicitly provided:
+
+Keywords for direct: مباشر, مالك, صاحب, direct, owner
+Keywords for broker: بروكر, سمسار, وسيط, مكتب, شركة, broker, agent, agency, office
+Default when unmatched: "direct"
+7. Property Creation & Editing
+7.1 Create Flow
+Admin navigates to /admin/properties/new → PropertyForm.tsx
+Form state initialized with all defaults (see §2)
+Required: code, typeId, regionId
+Images uploaded client-side as base64 DataURLs (max 20 images, max 8MB each, JPEG/PNG/WEBP)
+On save: addProperty() in DataContext is called
+If code is empty, generates "ALM-" + random5digits
+id generated: Date.now().toString(36) + Math.random().toString(36).slice(2)
+createdAt set to new Date().toISOString()
+Optimistically added to local state
+POST /api/properties sent in background with full payload
+API validates with insertPropertySchema (Zod) and inserts into DB
+7.2 Edit Flow
+Admin navigates to /admin/properties/:id/edit → same PropertyForm.tsx
+Existing property data pre-filled from context
+On save: updateProperty(id, payload) called
+Optimistically merges into local state
+PATCH /api/properties/:id sent in background
+API uses insertPropertySchema.partial() so any subset of fields is valid
+DB updated, returning the full updated row
+7.3 Bulk Operations
+Both are staff-only and handled by DataContext:
+
+Operation	Context method	API endpoint
+Bulk delete	bulkDeleteProperties(ids[])	DELETE /api/properties/bulk
+Bulk update	bulkUpdateProperties(ids[], updates)	PATCH /api/properties/bulk
+8. Import/Export System
+8.1 Files Responsible
+File	Responsibility
+artifacts/alamoudi/src/lib/propertyImport.ts	All client-side parsing logic (Excel, CSV, TXT)
+artifacts/alamoudi/src/pages/admin/ImportExport.tsx	Import/Export UI, preview step, confirm action
+artifacts/api-server/src/routes/properties.ts	POST /api/properties/import — server-side upsert
+artifacts/alamoudi/src/context/DataContext.tsx	importProperties() — orchestrates client state + API call
+8.2 Supported Import Formats
+Extension	Parser
+.xlsx, .xls	parseWorkbookBytes() via the xlsx (SheetJS) library
+.csv	parseDelimitedText() via custom parser
+.txt, .tsv	parseDelimitedText() via custom parser (same as CSV)
+.json	Only via the Backup/Restore screen — not the Import/Export screen
+8.3 Excel Import Pipeline
+Entry point: parseWorkbookBytes(bytes: Uint8Array): ParseResult
+
+Step-by-step:
+
+Parse workbook — XLSX.read() reads bytes; iterates all sheet names
+Per-sheet parsing — parseSheet(rows, sheetName)
+Infer sheet metadata — sheetMeta(sheetName) determines:
+regionId and regionName by matching the sheet name against REGION_PATTERNS (12 regex patterns covering all default regions, ordered by specificity)
+category from sheet name: إيجار/ايجار → rent, مفروش → furnished, else → sale
+Locate header row — findHeaderRow() scans the first 6 rows looking for a row containing both "النوع" and "الكود"
+Skip numbering rows — isNumberingRow() skips rows where all cells are numeric or #
+Map headers to fields — HEADER_FIELD dictionary (Arabic column names → internal field names):
+Arabic Header	Internal Field
+النوع	unitType
+الكود	code
+المنطقة	subArea
+المساحة	area
+الدور	floorText
+التوزيع	layout
+ماستر	master
+التشطيب	finishing
+أسانسير / اسانسير	elevator
+الفيو	view
+السعر	price
+المصدر	source
+الموقع	location
+Parse each data row — rowToProperty():
+Skips rows with no data in any of: unitType, code, subArea, area, layout, price
+Parses price via parsePrice() (handles Arabic digits, مليون/ألف suffixes)
+Parses area via parseArea() (strips units, rounds)
+Parses layout via parseLayout() (extracts غرف/حمام counts via regex)
+Parses floor number via parseFloorNumber() (handles أرضي → 0)
+Derives agentType from source field
+Auto-generates title in format: "شقة {area}م² ({category}) - {regionName} - {subArea}"
+Sets typeId = "apartment" (hardcoded for Excel import)
+Sets status = "active", featured = false (hardcoded defaults)
+8.4 CSV/TXT Import Pipeline
+Entry point: parseDelimitedText(text, regions, types): ParseResult
+
+Step-by-step:
+
+Strip BOM — removes UTF-8 BOM (\uFEFF) if present
+Split into rows — splitCsvIntoRows(): custom RFC-4180 compliant parser handling quoted fields with embedded newlines, both , and \t as delimiters
+Read header row — row 0; each header normalized via normalizeHeader():
+Strips Arabic diacritics (\u064B-\u065F\u0670)
+Strips all whitespace
+Lowercases
+Map headers to fields — ALIAS_TO_FIELD map (built from FIELD_ALIASES): supports both Arabic and English aliases; fuzzy-matched after normalization
+Full alias table (FIELD_ALIASES):
+
+Internal Field	Recognized Arabic Aliases	Recognized English Aliases
+unitType	النوع, نوع الوحدة, نوع_الوحدة	type, unittype
+code	الكود, كود, رقم الوحدة, رقم_الوحدة, رقم	code
+subArea	المنطقة, المنطقة الفرعية, منطقة_فرعية, حي, الحي	subarea
+area	المساحة, مساحة, م2, م²	area
+floorText	الدور, دور, الطابق, طابق	floor
+layout	التوزيع, توزيع, الغرف, غرف	layout
+master	ماستر	master
+finishing	التشطيب, تشطيب	finishing
+elevator	أسانسير, اسانسير, مصعد	elevator, lift
+view	الفيو, فيو, الإطلالة, إطلالة	view
+price	السعر, سعر	price
+source	المصدر, مصدر	source
+location	الموقع, موقع	location
+title	العنوان, عنوان	title
+description	الوصف, وصف	description
+regionName	المنطقة_الرئيسية, منطقة, المنطقةالرئيسية	region
+category	الفئة, فئة	category
+status	الحالة, حالة	status
+beds	غرف_النوم, غرفالنوم, الغرف, غرف	beds
+baths	الحمامات, حمامات	baths
+featured	مميز, مُميز	featured
+agentType	نوع_العرض, نوعالعرض	agenttype
+videoUrl	رابط_الفيديو, الفيديو, رابطالفيديو	videourl, tiktok
+mapsUrl	رابط_الخريطة, الخريطة, رابطالخريطة	mapsurl
+externalUrl	رابط_خارجي, رابطخارجي	externalurl
+Per-row parsing:
+Skips rows where ALL cells are empty
+Skips rows where code, title, price, AND area are all empty
+Resolves regionId: exact name match → contains match → REGION_PATTERNS regex → empty string
+Resolves typeId: exact name match from DB types → exact ID match → fallback "apartment"
+Resolves category: via catByLabel map (see §4.1)
+Resolves status: must be in STATUS_VALUES set; fallback "active"
+Resolves featured: true if cell is نعم, true, 1, or yes
+Resolves agentType: explicit broker/بروكر → "broker", explicit direct/مباشر → "direct", else from source text
+title defaults to auto-generated if not present
+beds/baths: uses explicit column if present; otherwise extracts from layout field via regex
+8.5 Region Resolution for Unmatched Rows
+During the preview step, properties with an empty regionId are flagged. The admin can choose a fallback region from a dropdown; this region is applied to all unresolved rows before confirming the import.
+
+8.6 Import Upsert Logic (Deduplication)
+The key is the code field:
+
+Client-side (DataContext.importProperties()):
+
+Builds a Map<code, index> of existing properties
+For each incoming item: if code matches an existing entry → update (merge); else → insert (new id + createdAt)
+All resulting records are sent in a single POST /api/properties/import call
+Server-side (POST /api/properties/import):
+
+Validates the entire array with z.array(insertPropertySchema)
+For each item: queries WHERE code = item.code LIMIT 1
+If found → UPDATE ... SET all_fields WHERE id = existing.id (id from incoming record is discarded)
+If not found → INSERT
+Returns { added: number, updated: number }
+8.7 Import Preview Step
+Before confirming, the UI shows:
+
+Count of new properties to be added (code not in current dataset)
+Count of existing properties to be updated (code already exists)
+Warning for unrecognized/unmapped column headers (shown as badges)
+Warning for rows with unresolved regionId + fallback region selector
+Preview table of first 5 rows: code, main region, sub-area, price, area, add/update badge
+8.8 Import Template
+Available as a downloadable CSV with BOM via "تحميل نموذج CSV":
+
+Headers:
+
+الكود,العنوان,الوصف,النوع,المنطقة,الفئة,الحالة,السعر,المساحة,غرف_النوم,الحمامات,
+الدور,التشطيب,الفيو,المصدر,مميز,نوع_العرض,رابط_الفيديو,رابط_الخريطة,رابط_خارجي
+
+Example row:
+
+ALM-1001,شقة فاخرة بمدينتي,وصف مختصر للعقار,شقة,مدينتي,للبيع,active,2500000,120,3,2,4,super-lux,بحري,مباشر,لا,direct,,,
+
+9. Export System
+9.1 Property Export
+Triggered from /admin/import-export → "تصدير CSV".
+
+Exported columns per property:
+
+CSV Header	Source Field
+الكود	code
+العنوان	title
+الوصف	description
+السعر	price
+المساحة	area
+غرف_النوم	beds
+الحمامات	baths
+الدور	floor
+التشطيب	finishing
+الفيو	view
+الفئة	category
+الحالة	status
+مميز	featured ? "نعم" : "لا"
+نوع_العرض	agentType
+رابط_الخريطة	mapsUrl
+رابط_الفيديو	videoUrl
+المنطقة	region name (resolved from regionId)
+النوع	type name (resolved from typeId)
+تاريخ_الإضافة	createdAt formatted as Arabic date
+Output: UTF-8 CSV with BOM (for Excel compatibility), downloaded as alamoudi-properties-YYYY-MM-DD.csv.
+
+Note: Source fields (source, sourcePhones, sourceEmail, sourceNotes) are not exported — they are internal/private staff data.
+
+9.2 Other Exportable Data
+The export dropdown also supports:
+
+Users — name, email, role, active status, join date
+Inquiries — name, phone, email, subject, message, status, date
+10. Backup and Restore System
+Located at /admin/backup → Backup.tsx.
+
+10.1 How It Works
+Backup is client-side only — it reads directly from localStorage, not from the API. This means it captures the in-browser cached state, not necessarily a live server snapshot.
+
+Keys backed up:
+
+alamoudi_regions
+alamoudi_property_types
+alamoudi_properties
+alamoudi_users
+alamoudi_inquiries
+alamoudi_finishing_requests
+alamoudi_property_requests
+alamoudi_settings
+alamoudi_favorites
+alamoudi_compare
+
+Export: Serializes all keys to a single JSON object with exportedAt and version: "1.0", downloaded as alamoudi-backup-YYYY-MM-DD.json.
+
+Restore: Reads uploaded JSON file, iterates the same key list, and writes each key back to localStorage, then reloads the page.
+
+Reset: Removes all keys from localStorage and reloads the page.
+
+Important limitation: The Backup/Restore operates on the browser's localStorage cache. The primary data store is the PostgreSQL database, which is managed through the API. The backup does not directly dump or restore the database — it works with the in-memory frontend cache.
+
+11. Validation Rules
+11.1 Client-side (Form)
+Field	Rule
+code	Must not be empty (trimmed)
+typeId	Must be selected
+regionId	Must be selected
+Images	Max 20 per property; max 8MB each; JPEG/PNG/WEBP only
+Phone numbers	Max 5 per property
+11.2 Import Validation (client)
+A parsed row is discarded if all of the following are empty/zero: price, area, code, title.
+
+11.3 Server-side (API)
+All routes use Zod schema validation generated from Drizzle schema via drizzle-zod:
+
+Route	Schema
+POST /api/properties	insertPropertySchema (full)
+PATCH /api/properties/:id	insertPropertySchema.partial()
+POST /api/properties/import	z.array(insertPropertySchema)
+PATCH /api/properties/bulk	z.object({ ids: string[], updates: insertPropertySchema.partial() })
+DELETE /api/properties/bulk	z.object({ ids: z.array(z.string()).min(1) })
+Failed validation returns HTTP 400 with { error: string }.
+
+11.4 Number Parsing Rules (propertyImport.ts)
+Arabic digits (٠-٩) are converted to Western digits before parsing
+Arabic decimal separator (٫) → .
+Arabic thousands separator (٬) → removed
+Price: Handles مليون (×1,000,000) and ألف/الف (×1,000) unit suffixes; handles thousands-separator dots (e.g. 1.500.000 → 1500000); takes first segment when | or newline separates multiple values
+Area: Extracts first numeric sequence; rounds to integer
+Floor: أرضي/ارضي → 0; first number otherwise
+Layout beds/baths: Regex (\d+)\s*غر for bedrooms, (\d+)\s*حمام for bathrooms
+12. Public vs. Staff API Access
+The GET /api/properties endpoint has dual behavior:
+
+Caller	Behavior
+Unauthenticated visitor	Returns only status = "active" rows; strips source, agentType, sourcePhones, sourceEmail, sourceLocation, sourceNotes
+Authenticated staff (admin/agent)	Returns all rows with all fields
+This ensures source/broker data is never exposed to the public.
+
+13. Summary of All Responsible Files
+Topic	File(s)
+Property DB schema	lib/db/src/schema/properties.ts
+Region DB schema	lib/db/src/schema/regions.ts
+Property type DB schema	lib/db/src/schema/propertyTypes.ts
+All schema exports	lib/db/src/schema/index.ts
+Property API routes	artifacts/api-server/src/routes/properties.ts
+Region API routes	artifacts/api-server/src/routes/regions.ts
+Property type API routes	artifacts/api-server/src/routes/propertyTypes.ts
+All routes registration	artifacts/api-server/src/routes/index.ts
+Default seed data (regions, types, admin)	artifacts/api-server/src/lib/seed.ts
+Seed properties (2086 lines)	artifacts/api-server/src/data/seedProperties.ts
+Finishing normalization	artifacts/api-server/src/lib/seed.ts (normalizeFinishingValues)
+Excel/CSV/TXT parsing	artifacts/alamoudi/src/lib/propertyImport.ts
+Finishing options enum	artifacts/alamoudi/src/lib/finishingOptions.ts
+Import/Export UI + confirm flow	artifacts/alamoudi/src/pages/admin/ImportExport.tsx
+Property create/edit form	artifacts/alamoudi/src/pages/admin/PropertyForm.tsx
+Backup/Restore UI	artifacts/alamoudi/src/pages/admin/Backup.tsx
+TypeScript interfaces + state management	artifacts/alamoudi/src/context/DataContext.tsx
+Private source lookup table	artifacts/alamoudi/src/data/seedSources.ts
+API client (fetch wrapper)	artifacts/alamoudi/src/lib/api.ts
