@@ -82,8 +82,9 @@ docs/                 # Technical documentation
 ### Auth Flow
 1. Frontend uses Supabase client for sign-in
 2. JWT stored in localStorage by Supabase
-3. API server reads JWT from Authorization header (future: server-side validation)
-4. Currently using service role key for all operations
+3. Frontend sends the JWT in the `Authorization: Bearer ...` header for API requests
+4. API server validates the JWT with Supabase Auth and derives the role from `user_profiles`
+5. The server uses the service role key for database operations only; it is never exposed to the browser
 
 ## Key Design Decisions
 

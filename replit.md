@@ -64,3 +64,7 @@ pnpm --filter @workspace/api-spec run codegen
 ## User Preferences
 
 - Do not create a new Supabase project or modify environment variables automatically — always ask the user first.
+
+## AI Agent Handoff
+
+`AGENTS.md` is the repository-wide operating contract for AI agents. Before any task, read `AGENTS.md`, `docs/PROJECT_MEMORY.md`, and this file. Keep the project memory current after important work.

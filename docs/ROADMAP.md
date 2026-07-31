@@ -15,13 +15,13 @@
 - [x] Platform settings (company name, logo, defaults)
 
 ## v1.1 — Polish
-- [ ] Saved search filters (persist filter presets)
-- [ ] Property comparison view (side-by-side)
-- [ ] Image management (upload to Supabase Storage)
+- [x] Saved search filters (persist filter presets)
+- [x] Property comparison view (side-by-side)
+- [x] Image management (upload to Supabase Storage)
 - [ ] PDF export with proper layout
 - [ ] Dark mode refinements
 - [ ] Mobile-responsive improvements
-- [ ] Keyboard shortcuts
+- [x] Keyboard shortcuts
 
 ## v1.2 — Intelligence
 - [ ] AI-powered description generator (from fields → Arabic description)
