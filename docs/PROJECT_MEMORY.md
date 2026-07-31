@@ -89,7 +89,11 @@ Durable architectural decisions are recorded in [`DECISIONS.md`](DECISIONS.md).
   clipboard copy, and explicit insertion without overwriting existing text.
 - Currency settings preserve the existing catalog and EGP default while providing a
   searchable bilingual picker with country names, currency names, ISO codes, symbols,
-  and flags. The catalog now includes 49 Arab and globally important currencies.
+  and bundled SVG flags that render consistently across desktop and mobile. The catalog
+  now includes 49 Arab and globally important currencies.
+- Smart analyzer requests now validate response content before parsing, handle HTML,
+  network, and non-OK responses without exposing technical messages, and keep the API
+  error response JSON-safe.
 - Parser results map supported fields into the existing property form, merge extracted
   project/city/facade/year/reception details into existing notes, and do not change the
   database schema.

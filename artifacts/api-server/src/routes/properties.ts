@@ -243,9 +243,10 @@ propertiesRouter.post("/parse-text", async (req, res) => {
     const { text } = req.body;
     if (!text) return void res.status(400).json({ error: "text is required" });
     const parsed = parsePropertyText(text);
-    res.json(parsed);
+    return void res.json(parsed);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    req.log.error({ err }, "parse-text error");
+    return void res.status(500).json({ error: "Unable to analyze property text" });
   }
 });
 

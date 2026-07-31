@@ -11,6 +11,21 @@ import { useState, useEffect } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
+import type { ComponentType } from "react";
+import {
+  AE, AU, BH, BR, CA, CH, CN, DJ, DK, DZ, EG, EU, GB, HK, ID, IL, IN,
+  IQ, JO, JP, KE, KM, KR, KW, LB, LY, MA, MR, MX, MY, NG, NO, NZ, OM, PL,
+  PS, QA, RU, SA, SD, SE, SG, SO, SY, TH, TN, TR, US, VN, YE, ZA,
+} from "country-flag-icons/react/3x2";
+import { getCurrencyCountryCode } from "@/lib/currencies";
+
+type FlagComponent = ComponentType<any>;
+
+const FLAG_COMPONENTS: Record<string, FlagComponent> = {
+  AE, AU, BH, BR, CA, CH, CN, DJ, DK, DZ, EG, EU, GB, HK, ID, IL, IN,
+  IQ, JO, JP, KE, KM, KR, KW, LB, LY, MA, MR, MX, MY, NG, NO, NZ, OM, PL,
+  PS, QA, RU, SA, SD, SE, SG, SO, SY, TH, TN, TR, US, VN, YE, ZA,
+};
 
 export default function Settings() {
   const { t, language } = useLanguage();
@@ -179,9 +194,12 @@ export default function Settings() {
 
 function CurrencyOptionRow({ code, language }: { code: string; language: "ar" | "en" }) {
   const currency = getCurrencyOption(code);
+  const Flag = FLAG_COMPONENTS[getCurrencyCountryCode(currency.code)];
   return (
     <span className="flex min-w-0 items-center gap-2.5">
-      <span className="text-xl leading-none" aria-hidden="true">{currency.flag}</span>
+      <span className="inline-flex h-5 w-7 shrink-0 overflow-hidden rounded-sm border border-border/70 bg-muted" aria-label={getCurrencyCountry(currency.code, language)}>
+        {Flag ? <Flag className="block h-full w-full" aria-hidden="true" /> : <span className="flex h-full w-full items-center justify-center text-[9px] font-semibold">{currency.code}</span>}
+      </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate font-medium">
           {getCurrencyCountry(currency.code, language)}

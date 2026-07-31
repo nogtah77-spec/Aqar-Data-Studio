@@ -79,6 +79,18 @@ export const CURRENCIES: CurrencyOption[] = [
 
 export const DEFAULT_CURRENCY = "EGP";
 
+const CURRENCY_COUNTRY_CODES: Record<string, string> = {
+  DZD: "DZ", BHD: "BH", KMF: "KM", DJF: "DJ", EGP: "EG", IQD: "IQ",
+  JOD: "JO", KWD: "KW", LBP: "LB", LYD: "LY", MRU: "MR", MAD: "MA",
+  OMR: "OM", ILS: "PS", QAR: "QA", SAR: "SA", SOS: "SO", SDG: "SD",
+  SYP: "SY", TND: "TN", AED: "AE", YER: "YE", USD: "US", EUR: "EU",
+  GBP: "GB", CHF: "CH", CAD: "CA", AUD: "AU", JPY: "JP", CNY: "CN",
+  INR: "IN", TRY: "TR", RUB: "RU", BRL: "BR", ZAR: "ZA", MXN: "MX",
+  SGD: "SG", HKD: "HK", SEK: "SE", NOK: "NO", DKK: "DK", NZD: "NZ",
+  PLN: "PL", KRW: "KR", THB: "TH", IDR: "ID", MYR: "MY", VND: "VN",
+  NGN: "NG",
+};
+
 export function getCurrencyOption(code?: string | null): CurrencyOption {
   return CURRENCIES.find((currency) => currency.code === code) ??
     CURRENCIES.find((currency) => currency.code === DEFAULT_CURRENCY)!;
@@ -92,4 +104,8 @@ export function getCurrencyLabel(code: string | null | undefined, language: "ar"
 export function getCurrencyCountry(code: string | null | undefined, language: "ar" | "en" = "ar") {
   const currency = getCurrencyOption(code);
   return language === "ar" ? currency.countryAr : currency.countryEn;
+}
+
+export function getCurrencyCountryCode(code?: string | null) {
+  return CURRENCY_COUNTRY_CODES[getCurrencyOption(code).code];
 }

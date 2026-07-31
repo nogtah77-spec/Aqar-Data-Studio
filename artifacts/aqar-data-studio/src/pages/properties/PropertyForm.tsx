@@ -19,7 +19,7 @@ import {
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { uploadPropertyImage } from "@/lib/supabase";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, readJsonResponse } from "@/lib/api";
 import { useCurrency } from "@/hooks/use-currency";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -168,13 +168,15 @@ function SmartParser({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "فشل التحليل");
+      const data = await readJsonResponse<Record<string, any>>(
+        res,
+        language === "ar" ? "تعذر تحليل النص. تحقق من الاتصال وحاول مرة أخرى." : "Unable to analyze the text. Check your connection and try again.",
+      );
       setParsed(data);
       setGeneratedDescription("");
       setCopied(false);
-    } catch (err: any) {
-      setError(err.message);
+    } catch {
+      setError(language === "ar" ? "تعذر تحليل النص. تحقق من الاتصال وحاول مرة أخرى." : "Unable to analyze the text. Check your connection and try again.");
     } finally {
       setLoading(false);
     }
