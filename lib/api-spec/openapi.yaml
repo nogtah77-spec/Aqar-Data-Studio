@@ -1025,20 +1025,31 @@ components:
     ParseTextResult:
       type: object
       properties:
+        code: { type: ["string", "null"] }
+        title: { type: ["string", "null"] }
+        projectName: { type: ["string", "null"] }
+        city: { type: ["string", "null"] }
         area: { type: ["integer", "null"] }
         beds: { type: ["integer", "null"] }
         baths: { type: ["integer", "null"] }
+        reception: { type: ["integer", "null"] }
         price: { type: ["integer", "null"] }
         priceFormatted: { type: ["string", "null"] }
         currency: { type: ["string", "null"] }
         finishing: { type: ["string", "null"] }
         view: { type: ["string", "null"] }
+        facade: { type: ["string", "null"] }
         regionId: { type: ["string", "null"] }
         regionName: { type: ["string", "null"] }
         subArea: { type: ["string", "null"] }
         floor: { type: ["integer", "null"] }
         floorText: { type: ["string", "null"] }
+        floors: { type: ["integer", "null"] }
+        buildingYear: { type: ["integer", "null"] }
         unitType: { type: ["string", "null"] }
+        propertyType: { type: ["string", "null"] }
+        category: { type: ["string", "null"] }
+        transactionType: { type: ["string", "null"] }
         layout: { type: ["string", "null"] }
         master: { type: ["string", "null"] }
         elevator: { type: ["string", "null"] }

@@ -290,11 +290,21 @@ export interface ParseTextInput {
 
 export interface ParseTextResult {
   /** @nullable */
+  code?: string | null;
+  /** @nullable */
+  title?: string | null;
+  /** @nullable */
+  projectName?: string | null;
+  /** @nullable */
+  city?: string | null;
+  /** @nullable */
   area?: number | null;
   /** @nullable */
   beds?: number | null;
   /** @nullable */
   baths?: number | null;
+  /** @nullable */
+  reception?: number | null;
   /** @nullable */
   price?: number | null;
   /** @nullable */
@@ -306,6 +316,8 @@ export interface ParseTextResult {
   /** @nullable */
   view?: string | null;
   /** @nullable */
+  facade?: string | null;
+  /** @nullable */
   regionId?: string | null;
   /** @nullable */
   regionName?: string | null;
@@ -316,7 +328,17 @@ export interface ParseTextResult {
   /** @nullable */
   floorText?: string | null;
   /** @nullable */
+  floors?: number | null;
+  /** @nullable */
+  buildingYear?: number | null;
+  /** @nullable */
   unitType?: string | null;
+  /** @nullable */
+  propertyType?: string | null;
+  /** @nullable */
+  category?: string | null;
+  /** @nullable */
+  transactionType?: string | null;
   /** @nullable */
   layout?: string | null;
   /** @nullable */

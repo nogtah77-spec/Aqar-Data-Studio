@@ -43,8 +43,9 @@ Durable architectural decisions are recorded in [`DECISIONS.md`](DECISIONS.md).
 - The repository contains the four agent-reference files:
   `AGENTS.md`, `docs/PROJECT_MEMORY.md`, `.github/copilot-instructions.md`, and
   `replit.md`.
-- The current implementation phase is Arabic/English interface support. Work proceeds
-  in the requested order; import/export improvements are next, followed by performance.
+- The current implementation phase is the production-grade smart property analyzer and
+  professional property-description generator, alongside the expanded currency catalog.
+  Import/export improvements and performance remain later phases.
 - Never force-push or overwrite remote work.
 
 ## Verification state
@@ -75,17 +76,23 @@ Durable architectural decisions are recorded in [`DECISIONS.md`](DECISIONS.md).
   persisted status.
 - Lookup-option create/update/delete operations now write audit records.
 - The smart analyzer now normalizes Arabic/Persian numerals, extracts Arabic and English
-  property facts, recognizes compact area/price/floor formats, identifies currencies and
-  amenities, formats numeric prices with thousands separators, and returns residual
-  additional details without repeating extracted facts.
+  property facts, recognizes compact area/price/floor formats, spelling variations,
+  mixed-language labels, property codes, projects, cities, receptions, building floors,
+  facades, building years, currencies, and amenities. It formats numeric prices with
+  thousands separators, scores confidence, and returns only residual details without
+  repeating extracted facts.
 - The analyzer result contract is maintained through OpenAPI codegen, with Orval pinned
   to Zod 3 output compatibility.
-- The new-property smart parser now includes a client-side professional description
-  generator with Arabic/English output, an editable preview, clipboard copy, and
-  explicit insertion into the description field without overwriting existing text.
-- Currency settings now include 42 Arab and global currencies with country/region flags,
-  Arabic labels, ISO codes, and symbols; existing formatting and the EGP default remain
-  unchanged.
+- The new-property smart parser includes a client-side professional description generator
+  with UI-language-aware Arabic/English output, a publish-ready title, organized sections,
+  sales highlights, clean bullet characters, appropriate emojis, editable preview,
+  clipboard copy, and explicit insertion without overwriting existing text.
+- Currency settings preserve the existing catalog and EGP default while providing a
+  searchable bilingual picker with country names, currency names, ISO codes, symbols,
+  and flags. The catalog now includes 49 Arab and globally important currencies.
+- Parser results map supported fields into the existing property form, merge extracted
+  project/city/facade/year/reception details into existing notes, and do not change the
+  database schema.
 - The property list now has explicit refresh/loading feedback, retryable error states,
   clearer empty states, search clearing, filter-aware reset behavior, selection reset
   on query/page changes, and keyboard-visible action controls.

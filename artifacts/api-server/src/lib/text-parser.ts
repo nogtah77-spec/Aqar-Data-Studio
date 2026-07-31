@@ -7,22 +7,31 @@
  */
 
 export interface ParsedPropertyFields {
+  code?: string;
+  title?: string;
+  projectName?: string;
+  city?: string;
   area?: number;
   beds?: number;
   baths?: number;
+  reception?: number;
   floors?: number;
+  buildingYear?: number;
   price?: number;
   priceFormatted?: string;
   currency?: string;
   finishing?: string;
   view?: string;
+  facade?: string;
   regionId?: string;
   regionName?: string;
   subArea?: string;
   floor?: number;
   floorText?: string;
   unitType?: string;
+  propertyType?: string;
   category?: string;
+  transactionType?: string;
   layout?: string;
   master?: string;
   elevator?: string;
@@ -155,6 +164,16 @@ const REGION_PATTERNS: { pattern: RegExp; id: string; name: string }[] = [
   { pattern: /6 اكتوبر|october|6th of october/, id: "oct6", name: "6 أكتوبر" },
 ];
 
+const CITY_PATTERNS: { pattern: RegExp; value: string }[] = [
+  { pattern: /القاهره|cairo|new cairo|new.?capital/, value: "القاهرة" },
+  { pattern: /الجيزه|giza|6.?october|october/, value: "الجيزة" },
+  { pattern: /الاسكندريه|اسكندريه|alexandria/, value: "الإسكندرية" },
+  { pattern: /العين السخنه|ain sokhna|el sokhna/, value: "العين السخنة" },
+  { pattern: /الساحل الشمالي|north coast/, value: "الساحل الشمالي" },
+  { pattern: /الغردقه|hurghada/, value: "الغردقة" },
+  { pattern: /شرم الشيخ|sharm el sheikh/, value: "شرم الشيخ" },
+];
+
 const UNIT_TYPE_PATTERNS: { pattern: RegExp; value: string }[] = [
   { pattern: /شقه|apartment|flat/, value: "apartment" },
   { pattern: /دوبلكس|duplex/, value: "duplex" },
@@ -182,6 +201,13 @@ const CURRENCY_PATTERNS: { pattern: RegExp; code: string }[] = [
   { pattern: /دولار|usd|dollar/, code: "USD" },
   { pattern: /يورو|eur|euro/, code: "EUR" },
   { pattern: /جنيه استرليني|gbp|pound/, code: "GBP" },
+  { pattern: /فرنك سويسري|chf|swiss franc/, code: "CHF" },
+  { pattern: /دولار كندي|cad|canadian dollar/, code: "CAD" },
+  { pattern: /دولار استرالي|aud|australian dollar/, code: "AUD" },
+  { pattern: /ين ياباني|jpy|japanese yen/, code: "JPY" },
+  { pattern: /يوان صيني|cny|chinese yuan/, code: "CNY" },
+  { pattern: /روبيه هندي|inr|indian rupee/, code: "INR" },
+  { pattern: /ليره تركيه|try|turkish lira/, code: "TRY" },
 ];
 
 const AMENITY_PATTERNS: { pattern: RegExp; value: string }[] = [
@@ -215,6 +241,12 @@ function cleanResidual(text: string, patterns: RegExp[]): string {
     .replace(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi, " ")
     .replace(/(?:\+?\d[\d\s().-]{7,}\d)/g, " ")
     .replace(/(?:هاتف|تليفون|موبايل|البريد|والبريد|phone|mobile|email)/gi, " ")
+    .replace(/(?:مساحه|area|sqm|sq\.?\s*ft|square feet?|ft²)\b/gi, " ")
+    .replace(/(?:الدور|طابق|floor|floors?|ادوار|طوابق)\b/gi, " ")
+    .replace(/(?:ريسبشن|ريسيبشن|receptions?|living rooms?)\b/gi, " ")
+    .replace(/(?:تشطي(?:ب)?|finish(?:ed|ing)?)\b/gi, " ")
+    .replace(/(?:الدور|طابق|floor)\s+(?:الأ?رضي|الاول|الثاني|الثالث|الرابع|الخامس|السادس|السابع|الثامن|التاسع|العاشر|ground|first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|\d+(?:st|nd|rd|th)?)/gi, " ")
+    .replace(/(?:\d+(?:st|nd|rd|th)?\s+floor|(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+floors?)/gi, " ")
     .replace(/\b(?:for|sale|rent|in|at|on|and|with|from|the|a|an|view|price|asking|starting)\b/gi, " ")
     .replace(/(?:للبيع|للايجار|للإيجار|بسعر|السعر|سعر|جنيه|ريال|درهم|دينار|دولار|يورو|مليون|ملايين|الف|ألف|مصري|سعودي|يمني|قطري|اماراتي|كويتي|اردني)/gi, " ")
     .replace(/(?:في|و|من|على|ب|ال)\s+/g, " ");
@@ -231,12 +263,69 @@ function unique(values: string[]): string[] {
   return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
 }
 
+function isResidualNoise(value: string): boolean {
+  const normalized = normalizeText(value)
+    .replace(/\b(?:st|nd|rd|th)\b/g, "")
+    .replace(/[.،,;؛|]+/g, "")
+    .trim();
+  return !normalized || /^(?:rooms?|floor|floors?|area|sqm|m2|ft2|مساحه|الدور|طابق|ادوار|طوابق|تشطي|تشطيب)$/.test(normalized);
+}
+
+function canonicalCity(value: string): string {
+  const normalized = normalizeText(value);
+  return CITY_PATTERNS.find(({ pattern }) => pattern.test(normalized))?.value ?? value.trim();
+}
+
+function firstLabeledValue(text: string, labels: string): { value: string; expression: RegExp } | undefined {
+  const expression = new RegExp(`(?:${labels})\\s*[:：-]\\s*([^،,;؛|\\n]+)`, "i");
+  const match = text.match(expression);
+  const value = match?.[1]?.trim();
+  return value ? { value, expression } : undefined;
+}
+
 export function parsePropertyText(text: string): ParsedPropertyFields {
   const source = String(text ?? "").trim();
   const norm = normalizeText(source);
   const result: ParsedPropertyFields = { confidence: 0 };
   const consumed: RegExp[] = [];
   let hits = 0;
+
+  const codeMatch = norm.match(/(?:كود|الكود|code|ref|reference|رقم العقار)\s*[:：#-]?\s*([a-z0-9][a-z0-9/_-]{2,})/i);
+  if (codeMatch?.[1]) {
+    result.code = codeMatch[1].toUpperCase();
+    hits++;
+    consumed.push(/(?:كود|الكود|code|ref|reference|رقم العقار)\s*[:：#-]?\s*[a-z0-9][a-z0-9/_-]{2,}/ig);
+  }
+
+  const title = firstLabeledValue(norm, "العنوان|عنوان العقار|title|listing title");
+  if (title) {
+    result.title = title.value;
+    hits++;
+    consumed.push(title.expression);
+  }
+
+  const project = firstLabeledValue(norm, "المشروع|اسم المشروع|الكمباوند|كمباوند|compound|project|development");
+  if (project) {
+    result.projectName = project.value;
+    hits++;
+    consumed.push(project.expression);
+  }
+
+  const city = firstLabeledValue(norm, "المدينه|المدينة|city|governorate");
+  if (city) {
+    result.city = canonicalCity(city.value);
+    hits++;
+    consumed.push(city.expression);
+  } else {
+    for (const cityPattern of CITY_PATTERNS) {
+      if (cityPattern.pattern.test(norm)) {
+        result.city = cityPattern.value;
+        hits++;
+        consumed.push(cityPattern.pattern);
+        break;
+      }
+    }
+  }
 
   const area = firstNumber(norm, new RegExp(`(${NUMBER_OR_WORD_TOKEN})\\s*(?:متر|م2|م²|م|sqm|m²|square meters?|مساحه)`, "i"))
     ?? firstNumber(norm, new RegExp(`(${NUMBER_OR_WORD_TOKEN})\\s*(?:sq\\.?\\s*ft|sqft|square feet?|ft²)`, "i"))
@@ -245,6 +334,7 @@ export function parsePropertyText(text: string): ParsedPropertyFields {
     result.area = Math.round(area);
     hits++;
     consumed.push(new RegExp(`${NUMBER_TOKEN}\\s*(?:متر|م2|م²|م(?!ليون|تر)|sqm|m²|square meters?|مساحه|sq\\.?\\s*ft|sqft|square feet?|ft²)`, "ig"));
+    consumed.push(new RegExp(`(?:مساحه|area)\\s*[:：-]?\\s*${NUMBER_TOKEN}\\s*(?:متر|م2|م²|sqm|m²|square meters?)?`, "ig"));
   }
 
   const beds = firstNumber(norm, new RegExp(`(${NUMBER_OR_WORD_TOKEN})\\s*(?:غرفه?|غرف|bedrooms?|beds?|br)`, "i"));
@@ -259,6 +349,15 @@ export function parsePropertyText(text: string): ParsedPropertyFields {
     result.baths = Math.round(baths);
     hits++;
     consumed.push(new RegExp(`${NUMBER_TOKEN}\\s*(?:حمامات|حمام|bathrooms?|baths?|ba)`, "ig"));
+  }
+
+  const reception = firstNumber(norm, new RegExp(`(${NUMBER_OR_WORD_TOKEN})\\s*(?:ريسبشن|ريسيبشن|receptions?|living rooms?)`, "i"))
+    ?? firstNumber(norm, new RegExp(`(?:ريسبشن|ريسيبشن|receptions?|living rooms?)\\s*[:：-]?\\s*(${NUMBER_OR_WORD_TOKEN})`, "i"));
+  if (reception !== undefined) {
+    result.reception = Math.round(reception);
+    hits++;
+    consumed.push(new RegExp(`${NUMBER_TOKEN}\\s*(?:ريسبشن|ريسيبشن|receptions?|living rooms?)`, "ig"));
+    consumed.push(new RegExp(`(?:ريسبشن|ريسيبشن|receptions?|living rooms?)\\s*[:：-]?\\s*${NUMBER_TOKEN}`, "ig"));
   }
 
   const floorMatch = norm.match(new RegExp(`(?:الدور|طابق|floor)\\s*[:：-]?\\s*(${NUMBER_OR_WORD_TOKEN})`, "i"));
@@ -281,7 +380,7 @@ export function parsePropertyText(text: string): ParsedPropertyFields {
     result.floor = Number(reverseFloorMatch[1]);
     result.floorText = reverseFloorMatch[0];
     hits++;
-    consumed.push(/\d+\s*(?:st|nd|rd|th)?\s*floor/ig);
+    consumed.push(/\d+\s*(?:st|nd|rd|th)?\s*floor\b/ig);
   }
 
   const floorSequenceMatch = norm.match(/(?:ارضي|اول|ثاني|ثالث|رابع|ground|first|second|third|fourth)(?:\s*و\s*(?:ارضي|اول|ثاني|ثالث|رابع)|\s+and\s+(?:ground|first|second|third|fourth))+/i);
@@ -296,17 +395,26 @@ export function parsePropertyText(text: string): ParsedPropertyFields {
     result.floors = Math.round(floors);
     hits++;
     consumed.push(new RegExp(`${NUMBER_TOKEN}\\s*(?:طوابق|ادوار|floors?)`, "ig"));
+    consumed.push(new RegExp(`(?:طوابق|ادوار|floors?)\\s*[:：-]?\\s*${NUMBER_TOKEN}`, "ig"));
+  }
+
+  const buildingYear = firstNumber(norm, /(?:سنه البناء|سنة البناء|عام البناء|سنه الانشاء|سنة الإنشاء|built in|build year|year built)\s*[:：-]?\s*(\d{4})/i)
+    ?? firstNumber(norm, /(?:بناء|انشاء|إنشاء)\s*(?:عام|سنه|سنة)?\s*[:：-]?\s*(\d{4})/i);
+  if (buildingYear !== undefined && buildingYear >= 1800 && buildingYear <= new Date().getFullYear() + 2) {
+    result.buildingYear = Math.round(buildingYear);
+    hits++;
+    consumed.push(/(?:سنه البناء|سنة البناء|عام البناء|سنه الانشاء|سنة الإنشاء|built in|build year|year built|بناء|انشاء|إنشاء)\s*(?:عام|سنه|سنة)?\s*[:：-]?\s*\d{4}/ig);
   }
 
   const currency = CURRENCY_PATTERNS.find(({ pattern }) => pattern.test(norm))?.code;
   if (currency) result.currency = currency;
 
   const multiplierPattern = "(مليار|مليون|ملايين|الف|ألف|thousand|million|billion|k|m)";
-  const currencyToken = "(?:جنيه|ريال|درهم|دينار|دولار|يورو|egp|sar|yer|aed|kwd|usd|eur)";
+  const currencyToken = "(?:جنيه(?:\\s+(?:مصري|استرليني))?|ريال|درهم|دينار|دولار|يورو|ليره|ليرة|فرنك|ين|يوان|روبيه|egp|sar|yer|qar|omr|jod|aed|kwd|usd|eur|gbp|chf|cad|aud|jpy|cny|inr|try)";
   const priceContext = norm.match(new RegExp(`(?:سعر|السعر|price|asking price|يبدأ من|starting from)\\s*[:：-]?\\s*${currencyToken}?\\s*(${NUMBER_TOKEN})(?:\\s*${multiplierPattern})?`, "i"));
-  const pricedNumber = norm.match(new RegExp(`(${NUMBER_TOKEN})\\s*(?:${multiplierPattern}|${currencyToken})`, "i"))
-    ?? norm.match(new RegExp(`${currencyToken}\\s*(${NUMBER_TOKEN})(?:\\s*${multiplierPattern})?`, "i"));
-  const priceMatch = priceContext ?? pricedNumber;
+  const currencyFirstPrice = norm.match(new RegExp(`${currencyToken}\\s*(${NUMBER_TOKEN})(?:\\s*${multiplierPattern})?`, "i"));
+  const pricedNumber = norm.match(new RegExp(`(${NUMBER_TOKEN})\\s*(?:${multiplierPattern}|${currencyToken})`, "i"));
+  const priceMatch = priceContext ?? currencyFirstPrice ?? pricedNumber;
   if (priceMatch) {
     const value = parseNumber(priceMatch[1]);
     const multiplier = normalizeText(priceMatch[2] ?? "");
@@ -330,6 +438,7 @@ export function parsePropertyText(text: string): ParsedPropertyFields {
       result.finishing = value;
       hits++;
       consumed.push(pattern);
+      consumed.push(new RegExp(`(?:تشطيب\\s+)?(?:الترا سوبر لوكس|سوبر لوكس|نص تشطيب|نصف تشطيب|semi.?finish|تشطيب\\s+\\d+\\s*%|طوب احمر|red brick|تحت الانشاء|under construction|متشطب|مشطب|تشطيب كامل|fully finished)`, "ig"));
       break;
     }
   }
@@ -356,6 +465,7 @@ export function parsePropertyText(text: string): ParsedPropertyFields {
   for (const { pattern, value } of UNIT_TYPE_PATTERNS) {
     if (pattern.test(norm)) {
       result.unitType = value;
+      result.propertyType = value;
       hits++;
       consumed.push(pattern);
       break;
@@ -364,10 +474,12 @@ export function parsePropertyText(text: string): ParsedPropertyFields {
 
   if (/للايجار|للايجار|for rent|rent/.test(norm)) {
     result.category = "rent";
+    result.transactionType = "rent";
     hits++;
     consumed.push(/للإ?يجار|for rent|rent/ig);
   } else if (/للبيع|for sale|sale/.test(norm)) {
     result.category = "sale";
+    result.transactionType = "sale";
     hits++;
     consumed.push(/للبيع|for sale|sale/ig);
   }
@@ -377,6 +489,21 @@ export function parsePropertyText(text: string): ParsedPropertyFields {
     result.subArea = subAreaMatch[1].trim();
     hits++;
     consumed.push(new RegExp(`(?:الحي|حى|المنطقه الفرعيه|sub.?area|district)\\s*[:：-]?\\s*[^،,;؛|]+`, "ig"));
+  }
+
+  const facade = firstLabeledValue(norm, "الواجهه|الواجهة|facade|frontage|اتجاه العقار|direction");
+  if (facade) {
+    result.facade = facade.value;
+    hits++;
+    consumed.push(facade.expression);
+  } else {
+    const facadePattern = /(?:واجهه|واجهة|facade|facing)\s+(?:على\s+)?([^،,;؛|]+)/i;
+    const facadeMatch = norm.match(facadePattern);
+    if (facadeMatch?.[1]) {
+      result.facade = facadeMatch[1].trim();
+      hits++;
+      consumed.push(facadePattern);
+    }
   }
 
   const email = source.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0];
@@ -418,20 +545,24 @@ export function parsePropertyText(text: string): ParsedPropertyFields {
     ].filter(Boolean).join(" + ");
   }
 
-  const locationParts = [result.regionName, result.subArea].filter(Boolean);
+  const locationParts = unique([result.regionName, result.subArea, result.city].filter(Boolean) as string[]);
   if (locationParts.length) result.location = locationParts.join("، ");
 
   const residual = cleanResidual(norm, consumed);
   const additionalDetails = unique(
-    residual.split(/(?:،|,|;|؛)/).map((part) => part.trim()).filter((part) => part.length > 3)
+    residual.split(/(?:،|,|;|؛)/)
+      .map((part) => part.trim())
+      .filter((part) => part.length > 3 && !isResidualNoise(part))
   );
   result.additionalDetails = additionalDetails;
   result.description = additionalDetails.join("، ") || undefined;
 
   const extractedCount = [
-    result.area, result.beds, result.baths, result.price, result.floor,
-    result.finishing, result.view, result.regionId, result.unitType,
-    result.category, result.subArea, result.amenities?.length,
+    result.code, result.projectName, result.city, result.area, result.beds,
+    result.baths, result.reception, result.price, result.floor, result.floors,
+    result.buildingYear, result.finishing, result.view, result.facade,
+    result.regionId, result.unitType, result.category, result.subArea,
+    result.amenities?.length,
   ].filter((value) => value !== undefined && value !== null && value !== 0).length;
   result.confidence = Math.min(1, Math.round((hits / Math.max(8, extractedCount + 3)) * 100) / 100);
   return result;

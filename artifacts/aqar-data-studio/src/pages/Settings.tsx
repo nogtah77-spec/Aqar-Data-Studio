@@ -4,10 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { CURRENCIES, DEFAULT_CURRENCY, getCurrencyLabel, getCurrencyOption } from "@/lib/currencies";
+import { CURRENCIES, DEFAULT_CURRENCY, getCurrencyCountry, getCurrencyLabel, getCurrencyOption } from "@/lib/currencies";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Save, Loader2, Settings as SettingsIcon } from "lucide-react";
+import { Check, ChevronsUpDown, Save, Loader2, Settings as SettingsIcon } from "lucide-react";
 import { useState, useEffect } from "react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 
 export default function Settings() {
   const { t, language } = useLanguage();
@@ -15,6 +18,7 @@ export default function Settings() {
   const updateMutation = useUpdateSettings();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [currencyPickerOpen, setCurrencyPickerOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     companyName: "",
@@ -84,26 +88,45 @@ export default function Settings() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">{t("settings.defaultCurrency")}</label>
-                 <select
-                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  value={formData.currency} 
-                   onChange={e => setFormData({...formData, currency: e.target.value})}
-                 >
-                    {CURRENCIES.map((currency) => (
-                     <option key={currency.code} value={currency.code}>
-                         {currency.flag} {getCurrencyLabel(currency.code, language)} · {currency.code} ({currency.symbol})
-                     </option>
-                   ))}
-                 </select>
-                  <div className="flex items-center gap-2 rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-sm">
-                    <span className="text-xl leading-none" aria-hidden="true">
-                      {getCurrencyOption(formData.currency).flag}
-                    </span>
-                     <span className="font-medium">{getCurrencyLabel(formData.currency, language)}</span>
-                    <span className="text-muted-foreground">
-                      {getCurrencyOption(formData.currency).code} · {getCurrencyOption(formData.currency).symbol}
-                    </span>
-                  </div>
+                  <Popover open={currencyPickerOpen} onOpenChange={setCurrencyPickerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={currencyPickerOpen}
+                        className="h-auto min-h-10 w-full justify-between gap-3 px-3 py-2 text-start"
+                      >
+                        <CurrencyOptionRow code={formData.currency} language={language} />
+                        <ChevronsUpDown size={16} className="shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent align="start" className="w-[min(420px,calc(100vw-2rem))] p-0">
+                      <Command>
+                        <CommandInput placeholder={language === "ar" ? "ابحث بالدولة أو العملة أو الرمز…" : "Search country, currency, or code…"} />
+                        <CommandList>
+                          <CommandEmpty>{language === "ar" ? "لا توجد عملة مطابقة." : "No matching currency."}</CommandEmpty>
+                          {CURRENCIES.map((currency) => (
+                            <CommandItem
+                              key={currency.code}
+                              value={`${currency.code} ${currency.currencyAr} ${currency.currencyEn} ${currency.countryAr} ${currency.countryEn}`}
+                              onSelect={() => {
+                                setFormData({ ...formData, currency: currency.code });
+                                setCurrencyPickerOpen(false);
+                              }}
+                              className="py-2.5"
+                            >
+                              <CurrencyOptionRow code={currency.code} language={language} />
+                              <Check
+                                size={16}
+                                className={cn("ms-auto shrink-0", formData.currency === currency.code ? "opacity-100" : "opacity-0")}
+                              />
+                            </CommandItem>
+                          ))}
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                   <p className="text-xs text-muted-foreground">{t("settings.currencyHint")}</p>
               </div>
             </div>
@@ -151,5 +174,24 @@ export default function Settings() {
         </div>
       </form>
     </div>
+  );
+}
+
+function CurrencyOptionRow({ code, language }: { code: string; language: "ar" | "en" }) {
+  const currency = getCurrencyOption(code);
+  return (
+    <span className="flex min-w-0 items-center gap-2.5">
+      <span className="text-xl leading-none" aria-hidden="true">{currency.flag}</span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate font-medium">
+          {getCurrencyCountry(currency.code, language)}
+          <span className="mx-1 text-muted-foreground">·</span>
+          {getCurrencyLabel(currency.code, language)}
+        </span>
+        <span className="block text-xs text-muted-foreground">
+          {currency.code} <span className="mx-1">·</span> {currency.symbol}
+        </span>
+      </span>
+    </span>
   );
 }

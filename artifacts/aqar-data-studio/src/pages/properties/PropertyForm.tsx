@@ -22,6 +22,7 @@ import { uploadPropertyImage } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
 import { useCurrency } from "@/hooks/use-currency";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 // ── Smart text parser widget ──────────────────────────────────────────────────
 
@@ -54,53 +55,85 @@ function generatePropertyDescription(parsed: Record<string, any>, language: Desc
   const category = parsed.category === "rent"
     ? (isArabic ? "للإيجار" : "for rent")
     : (isArabic ? "للبيع" : "for sale");
-  const location = [parsed.subArea, parsed.regionName, parsed.location]
+  const locationParts = [parsed.projectName, parsed.subArea, parsed.regionName, parsed.city, parsed.location]
     .filter(Boolean)
-    .filter((value, index, values) => values.indexOf(value) === index)
-    .join(isArabic ? "، " : ", ");
+    .filter((value, index, values) => values.indexOf(value) === index);
+  const amenityLabels: Record<string, { ar: string; en: string }> = {
+    "غرفة ماستر": { ar: "غرفة ماستر", en: "master bedroom" },
+    "مصعد": { ar: "مصعد", en: "elevator" },
+    "جراج": { ar: "جراج", en: "parking" },
+    "مفروش": { ar: "مفروش", en: "furnished" },
+    "غير مفروش": { ar: "غير مفروش", en: "unfurnished" },
+    "تكييف": { ar: "تكييف", en: "air conditioning" },
+    "أمن وحراسة": { ar: "أمن وحراسة", en: "security" },
+    "حمام سباحة": { ar: "حمام سباحة", en: "swimming pool" },
+    "شرفة": { ar: "شرفة", en: "balcony" },
+    "مطبخ": { ar: "مطبخ", en: "kitchen" },
+    "روف": { ar: "روف", en: "rooftop" },
+    "حديقة خاصة": { ar: "حديقة خاصة", en: "private garden" },
+  };
+  const amenities = (Array.isArray(parsed.amenities) ? parsed.amenities : [])
+    .map((amenity: string) => amenityLabels[amenity]?.[language] ?? amenity);
   const facts = [
-    parsed.area !== undefined && (isArabic ? `بمساحة ${parsed.area} م²` : `${parsed.area} sqm`),
-    parsed.beds !== undefined && (isArabic ? `${parsed.beds} غرف` : `${parsed.beds} bedrooms`),
-    parsed.baths !== undefined && (isArabic ? `${parsed.baths} حمام` : `${parsed.baths} bathrooms`),
-    parsed.floorText && (isArabic ? `في ${parsed.floorText}` : `on the ${parsed.floorText}`),
-    parsed.finishing && (isArabic ? `بتشطيب ${parsed.finishing}` : `${parsed.finishing} finish`),
-    parsed.view && (isArabic ? `بإطلالة ${parsed.view}` : `${parsed.view} view`),
-  ].filter(Boolean);
-  const amenities = Array.isArray(parsed.amenities) ? parsed.amenities : [];
-  const amenityText = amenities.length
-    ? (isArabic ? `وتشمل المميزات ${amenities.join("، ")}` : `Features include ${amenities.join(", ")}`)
-    : "";
-  const price = formatGeneratedPrice(parsed.price, parsed.currency);
-  const priceText = price
-    ? (isArabic ? `السعر ${price}` : `priced at ${price}`)
-    : "";
+    parsed.area !== undefined && (isArabic ? `المساحة: ${parsed.area} م²` : `Area: ${parsed.area} sqm`),
+    parsed.beds !== undefined && (isArabic ? `غرف النوم: ${parsed.beds}` : `Bedrooms: ${parsed.beds}`),
+    parsed.baths !== undefined && (isArabic ? `الحمامات: ${parsed.baths}` : `Bathrooms: ${parsed.baths}`),
+    parsed.reception !== undefined && (isArabic ? `الريسبشن: ${parsed.reception}` : `Reception rooms: ${parsed.reception}`),
+    parsed.floorText && (isArabic ? `الدور: ${parsed.floorText}` : `Floor: ${parsed.floorText}`),
+    parsed.floors !== undefined && (isArabic ? `عدد الأدوار: ${parsed.floors}` : `Building floors: ${parsed.floors}`),
+    parsed.finishing && (isArabic ? `التشطيب: ${parsed.finishing}` : `Finish: ${parsed.finishing}`),
+    parsed.view && (isArabic ? `الإطلالة: ${parsed.view}` : `View: ${parsed.view}`),
+    parsed.facade && (isArabic ? `الواجهة: ${parsed.facade}` : `Facade: ${parsed.facade}`),
+    parsed.buildingYear !== undefined && (isArabic ? `سنة البناء: ${parsed.buildingYear}` : `Built in: ${parsed.buildingYear}`),
+  ].filter(Boolean) as string[];
   const details = Array.isArray(parsed.additionalDetails)
-    ? parsed.additionalDetails.filter(Boolean).join(isArabic ? "، " : ", ")
+    ? parsed.additionalDetails.filter(Boolean)
+    : [];
+  const price = formatGeneratedPrice(parsed.price, parsed.currency);
+  const title = parsed.title?.trim()
+    || `${unit} ${category}${locationParts.length ? (isArabic ? ` في ${locationParts[0]}` : ` in ${locationParts[0]}`) : ""}`;
+  const titleLine = isArabic
+    ? `✨ ${title}`
+    : `✨ ${title}`;
+  const locationLine = locationParts.length
+    ? (isArabic ? `📍 الموقع: ${locationParts.join("، ")}` : `📍 Location: ${locationParts.join(", ")}`)
     : "";
-
-  if (isArabic) {
-    return [
-      `${unit} ${category}${location ? ` في ${location}` : ""}.`,
-      facts.length ? `تتميز بـ${facts.join("، ")}.` : "",
-      amenityText ? `${amenityText}.` : "",
-      parsed.furnished === "مفروش" ? "العقار مفروش بالكامل." : "",
-      parsed.parking === "نعم" ? "يتوفر موقف سيارات." : "",
-      parsed.elevator === "نعم" ? "يتوفر مصعد." : "",
-      priceText ? `${priceText}.` : "",
-      details ? `تفاصيل إضافية: ${details}.` : "",
-    ].filter(Boolean).join(" ");
-  }
+  const opening = isArabic
+    ? `${unit} ${category}${locationParts.length ? ` في ${locationParts.join("، ")}` : ""} بمواصفات واضحة ومعلومات جاهزة للمعاينة.`
+    : `${unit} ${category}${locationParts.length ? ` in ${locationParts.join(", ")}` : ""}, presented with clear details and viewing-ready information.`;
+  const factsSection = facts.length
+    ? (isArabic ? `🏠 التفاصيل الأساسية\n${facts.map((fact) => `• ${fact}`).join("\n")}` : `🏠 Key details\n${facts.map((fact) => `• ${fact}`).join("\n")}`)
+    : "";
+  const highlightsSection = amenities.length
+    ? (isArabic ? `🌟 أبرز المميزات\n${amenities.map((amenity: string) => `• ${amenity}`).join("\n")}` : `🌟 Highlights\n${amenities.map((amenity: string) => `• ${amenity}`).join("\n")}`)
+    : "";
+  const detailsSection = details.length
+    ? (isArabic ? `📝 تفاصيل إضافية\n${details.map((detail: string) => `• ${detail}`).join("\n")}` : `📝 Additional details\n${details.map((detail: string) => `• ${detail}`).join("\n")}`)
+    : "";
+  const priceSection = price
+    ? (isArabic ? `💰 السعر: ${price}` : `💰 Price: ${price}`)
+    : "";
+  const contactSection = [
+    parsed.sourcePhones?.length && (isArabic ? `📞 للتواصل: ${parsed.sourcePhones.join("، ")}` : `📞 Contact: ${parsed.sourcePhones.join(", ")}`),
+    parsed.sourceEmail && (isArabic ? `✉️ البريد الإلكتروني: ${parsed.sourceEmail}` : `✉️ Email: ${parsed.sourceEmail}`),
+    parsed.externalUrl && (isArabic ? `🔗 التفاصيل: ${parsed.externalUrl}` : `🔗 Details: ${parsed.externalUrl}`),
+  ].filter(Boolean).join("\n");
+  const closing = isArabic
+    ? "📩 للتفاصيل أو تحديد موعد للمعاينة، يُرجى التواصل عبر البيانات الموضحة أعلاه."
+    : "📩 Contact through the details above for more information or to arrange a viewing.";
 
   return [
-    `${unit} ${category}${location ? ` in ${location}` : ""}.`,
-    facts.length ? `It offers ${facts.join(", ")}.` : "",
-    amenityText ? `${amenityText}.` : "",
-    parsed.furnished === "مفروش" ? "The property is fully furnished." : "",
-    parsed.parking === "نعم" ? "Dedicated parking is available." : "",
-    parsed.elevator === "نعم" ? "Elevator access is available." : "",
-    priceText ? `${priceText}.` : "",
-    details ? `Additional details: ${details}.` : "",
-  ].filter(Boolean).join(" ");
+    titleLine,
+    locationLine,
+    "",
+    opening,
+    factsSection,
+    highlightsSection,
+    detailsSection,
+    priceSection,
+    contactSection,
+    closing,
+  ].filter(Boolean).join("\n\n");
 }
 
 function SmartParser({
@@ -110,14 +143,19 @@ function SmartParser({
   onApply: (fields: Record<string, any>) => void;
   onApplyDescription: (description: string) => void;
 }) {
+  const { language } = useLanguage();
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [parsed, setParsed] = useState<Record<string, any> | null>(null);
   const [error, setError] = useState("");
   const [open, setOpen] = useState(true);
-  const [descriptionLanguage, setDescriptionLanguage] = useState<DescriptionLanguage>("ar");
+  const [descriptionLanguage, setDescriptionLanguage] = useState<DescriptionLanguage>(language);
   const [generatedDescription, setGeneratedDescription] = useState("");
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    setDescriptionLanguage(language);
+  }, [language]);
 
   const handleParse = async () => {
     if (!text.trim()) return;
@@ -143,9 +181,11 @@ function SmartParser({
   };
 
   const FIELD_LABELS: Record<string, string> = {
+    code: "كود العقار", title: "العنوان", projectName: "المشروع", city: "المدينة",
     area: "المساحة (م²)", beds: "الغرف", baths: "الحمامات",
+    reception: "الريسبشن", floors: "عدد الأدوار", buildingYear: "سنة البناء",
     price: "السعر", priceFormatted: "السعر", currency: "العملة",
-    finishing: "التشطيب", view: "الإطلالة",
+    finishing: "التشطيب", view: "الإطلالة", facade: "الواجهة",
     regionName: "المنطقة", floor: "الدور", floorText: "الطابق (نصي)",
     layout: "التوزيع", unitType: "نوع الوحدة", subArea: "الحي",
     amenities: "المميزات", sourceEmail: "البريد", sourcePhones: "الهواتف",
@@ -341,7 +381,7 @@ function Field({
 // ── Main form ─────────────────────────────────────────────────────────────────
 
 const EMPTY_FORM = {
-  code: "", title: "", price: "", area: "", beds: "", baths: "",
+  code: "", title: "", price: "", area: "", beds: "", baths: "", floors: "",
   description: "", status: "active", category: "sale",
   regionId: "", typeId: "", finishing: "", view: "",
   subArea: "", floorText: "", floor: "", source: "", sourceNotes: "",
@@ -546,6 +586,7 @@ export default function PropertyForm() {
         area:        property.area?.toString()   ?? "",
         beds:        property.beds?.toString()   ?? "",
         baths:       property.baths?.toString()  ?? "",
+         floors:      property.floors?.toString() ?? "",
         description: property.description ?? "",
         status:      property.status      ?? "active",
         category:    property.category    ?? "sale",
@@ -578,12 +619,26 @@ export default function PropertyForm() {
       parsed.sourceEmail && `البريد: ${parsed.sourceEmail}`,
       parsed.sourcePhones?.length && `الهاتف: ${parsed.sourcePhones.join("، ")}`,
     ].filter(Boolean).join("، ");
+    const extractedNotes = [
+      parsed.projectName && `المشروع: ${parsed.projectName}`,
+      parsed.city && `المدينة: ${parsed.city}`,
+      parsed.facade && `الواجهة: ${parsed.facade}`,
+      parsed.buildingYear && `سنة البناء: ${parsed.buildingYear}`,
+      parsed.reception && `الريسبشن: ${parsed.reception}`,
+      parsed.parking && `الجراج: ${parsed.parking}`,
+      parsed.furnished && `التأثيث: ${parsed.furnished}`,
+      parsed.additionalDetails?.length && parsed.additionalDetails.join("، "),
+      parsed.amenities?.length && `المميزات: ${parsed.amenities.join("، ")}`,
+    ].filter(Boolean).join("، ");
 
     setForm((prev) => ({
       ...prev,
+      ...(parsed.code      !== undefined && { code:      parsed.code }),
+      ...(parsed.title     !== undefined && { title:     parsed.title }),
       ...(parsed.area      !== undefined && { area:      String(parsed.area) }),
       ...(parsed.beds      !== undefined && { beds:      String(parsed.beds) }),
       ...(parsed.baths     !== undefined && { baths:     String(parsed.baths) }),
+      ...(parsed.floors    !== undefined && { floors:    String(parsed.floors) }),
       ...(parsed.price     !== undefined && { price:     String(parsed.price) }),
       ...(parsed.finishing !== undefined && { finishing: parsed.finishing }),
       ...(parsed.view      !== undefined && { view:      parsed.view }),
@@ -595,8 +650,11 @@ export default function PropertyForm() {
       ...(parsed.elevator !== undefined && { elevator:   parsed.elevator }),
       ...(parsed.location !== undefined && { location:   parsed.location }),
       ...(parsed.source   !== undefined && { source:     parsed.source }),
-      ...(contactNotes && { sourceNotes: contactNotes }),
-      ...(parsed.amenities?.length && { notes: parsed.amenities.join("، ") }),
+      ...((contactNotes || parsed.externalUrl) && {
+        sourceNotes: [prev.sourceNotes, contactNotes, parsed.externalUrl && `الرابط: ${parsed.externalUrl}`]
+          .filter(Boolean).join("، "),
+      }),
+      ...(extractedNotes && { notes: [prev.notes, extractedNotes].filter(Boolean).join("، ") }),
       ...(parsed.description !== undefined && { description: prev.description || parsed.description }),
       ...(parsed.regionId  !== undefined && { regionId:  parsed.regionId }),
       ...(parsed.unitType !== undefined &&
@@ -615,6 +673,7 @@ export default function PropertyForm() {
       area:        form.area     ? Number(form.area)     : undefined,
       beds:        form.beds     ? Number(form.beds)     : undefined,
       baths:       form.baths    ? Number(form.baths)    : undefined,
+      floors:      form.floors   ? Number(form.floors)   : undefined,
       floor:       form.floor    ? Number(form.floor)    : undefined,
       status:      form.status,
       category:    form.category,
@@ -795,6 +854,9 @@ export default function PropertyForm() {
               </Field>
               <Field label="الطابق (نصي)">
                 <Input placeholder="مثال: الثالث" value={form.floorText} onChange={set("floorText")} />
+              </Field>
+              <Field label="عدد أدوار المبنى">
+                <Input type="number" placeholder="مثال: 5" value={form.floors} onChange={set("floors")} />
               </Field>
             </div>
 
