@@ -75,7 +75,17 @@ usersRouter.patch("/:id", async (req, res) => {
     if (role !== undefined) updates.role = role;
 
     if (Object.keys(updates).length > 0) {
-      await supabaseAdmin.from("user_profiles").upsert({ id: req.params.id, ...updates });
+      const { error: profileError } = await supabaseAdmin
+        .from("user_profiles")
+        .upsert({ id: req.params.id, ...updates });
+      if (profileError) throw profileError;
+    }
+
+    if (active !== undefined) {
+      const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(req.params.id, {
+        ban_duration: active ? "none" : "876000h",
+      });
+      if (authError) throw authError;
     }
 
     await logAudit({ action: "update", resourceType: "user", resourceId: req.params.id });
@@ -92,7 +102,7 @@ usersRouter.patch("/:id", async (req, res) => {
       email: authUser?.user?.email,
       name: profile?.name ?? null,
       role: profile?.role ?? "viewer",
-      active: active ?? true,
+      active: authUser?.user ? !authUser.user.banned_until : active ?? true,
       createdAt: authUser?.user?.created_at,
       lastSignIn: authUser?.user?.last_sign_in_at ?? null,
     });

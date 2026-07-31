@@ -43,26 +43,45 @@ Durable architectural decisions are recorded in [`DECISIONS.md`](DECISIONS.md).
 - The repository contains the four agent-reference files:
   `AGENTS.md`, `docs/PROJECT_MEMORY.md`, `.github/copilot-instructions.md`, and
   `replit.md`.
-- The current task is documentation-only: keep the local memory summary aligned with
-  the latest remote documentation and synchronize it safely with `origin/main`.
+- The stabilization pass is focused on confirmed reliability, security, validation, and
+  cache-refresh issues; it does not add product features or change the UI design.
 - Never force-push or overwrite remote work.
 
 ## Verification state
 
-- `pnpm run typecheck` passes.
-- `pnpm build` requires the existing `mockup-sandbox` build environment values
-  `PORT` and `BASE_PATH`; with temporary command-line values
-  (`PORT=4173 BASE_PATH=/`) the workspace build passes.
-- The normal build command fails before compilation when those values are absent.
-- Run `git diff --check`, `pnpm run typecheck`, and the build command before a
-  documentation commit when the environment supports it.
+- `pnpm run typecheck` passes after the stabilization fixes.
+- The workspace build passes with temporary command-line values
+  (`PORT=4173 BASE_PATH=/`). The unmodified build configuration for
+  `mockup-sandbox` requires those values even during a build, so plain `pnpm build`
+  stops before compilation when they are absent.
+- API health returns `200`; protected API routes return `401` without a session.
+- The frontend login screen renders without browser console errors in the final preview.
+- Full authenticated CRUD, import, export, image, and role-specific flows still require
+  a real user session and cannot be verified here without adding credentials or test
+  property data.
+
+## Stabilization changes currently in the code
+
+- Export is protected by the existing `admin`/`agent` role boundary.
+- Search and property-list query input now handles invalid page/limit values safely and
+  escapes special characters before building PostgREST `or` filters.
+- Audit-log and dashboard activity pagination now enforce valid minimum limits.
+- Imports preserve a missing region as `null` instead of an invalid empty foreign key.
+- Import success invalidates property, dashboard, and search query caches without a full
+  page refresh.
+- Search displays a recoverable error state instead of presenting a false empty result.
+- HTML-based Excel/PDF export escapes generated cell and header content.
+- User activation/deactivation now updates the Supabase Auth ban state and returns the
+  persisted status.
+- Lookup-option create/update/delete operations now write audit records.
 
 ## Current next steps
 
-1. Finish the non-destructive Git reconciliation with the latest `origin/main`.
-2. Push `main` only after confirming that remote work is preserved and authentication
-   succeeds.
-3. Keep the existing Supabase write/RLS follow-up separate from this documentation task.
+1. Run authenticated end-to-end CRUD/import/export/image tests with an approved test
+   account and non-production fixture data.
+2. Validate Supabase write/RLS behavior in the connected project without changing its
+   schema or settings.
+3. Keep monitoring workflow logs and browser console output after future runtime changes.
 
 ## Current constraints
 

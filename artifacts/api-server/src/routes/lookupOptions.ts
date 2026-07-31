@@ -53,6 +53,13 @@ lookupOptionsRouter.post("/", async (req, res) => {
       .single();
 
     if (error) throw error;
+    await logAudit({
+      action: "create",
+      resourceType: "lookup_option",
+      resourceId: data.id,
+      resourceLabel: data.label,
+      after: data,
+    });
     res.status(201).json({ id: data.id, category: data.category, value: data.value, label: data.label, active: data.active, sortOrder: data.sort_order });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -75,6 +82,13 @@ lookupOptionsRouter.patch("/:id", async (req, res) => {
       .single();
 
     if (error) throw error;
+    await logAudit({
+      action: "update",
+      resourceType: "lookup_option",
+      resourceId: data.id,
+      resourceLabel: data.label,
+      after: data,
+    });
     res.json({ id: data.id, category: data.category, value: data.value, label: data.label, active: data.active, sortOrder: data.sort_order });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -85,6 +99,11 @@ lookupOptionsRouter.delete("/:id", async (req, res) => {
   try {
     const { error } = await supabaseAdmin.from("lookup_options").delete().eq("id", req.params.id);
     if (error) throw error;
+    await logAudit({
+      action: "delete",
+      resourceType: "lookup_option",
+      resourceId: req.params.id,
+    });
     res.json({ success: true, id: req.params.id });
   } catch (err: any) {
     res.status(500).json({ error: err.message });

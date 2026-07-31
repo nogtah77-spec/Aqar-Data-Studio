@@ -12,7 +12,9 @@ searchRouter.get("/", async (req, res) => {
     }
 
     const searchQuery = q.trim();
-    const limitNum = Math.min(20, parseInt(limit));
+    const parsedLimit = Number.parseInt(limit, 10);
+    const limitNum = Number.isFinite(parsedLimit) ? Math.min(20, Math.max(1, parsedLimit)) : 10;
+    const safeSearch = searchQuery.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
     const typeList = types.split(",").map((t) => t.trim());
 
     const results: any[] = [];
@@ -21,7 +23,7 @@ searchRouter.get("/", async (req, res) => {
       const { data } = await supabaseAdmin
         .from("properties")
         .select("id, code, title, sub_area, region_id, price, area")
-        .or(`title.ilike.%${searchQuery}%,code.ilike.%${searchQuery}%,sub_area.ilike.%${searchQuery}%`)
+        .or(`title.ilike."%${safeSearch}%",code.ilike."%${safeSearch}%",sub_area.ilike."%${safeSearch}%"`)
         .limit(limitNum);
 
       (data ?? []).forEach((p) => {

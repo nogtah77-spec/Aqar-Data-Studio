@@ -15,8 +15,10 @@ auditLogsRouter.get("/", async (req, res) => {
       to: toDate,
     } = req.query as Record<string, string>;
 
-    const pageNum = Math.max(1, parseInt(page));
-    const limitNum = Math.min(100, parseInt(limit));
+    const parsedPage = Number.parseInt(page, 10);
+    const parsedLimit = Number.parseInt(limit, 10);
+    const pageNum = Number.isFinite(parsedPage) ? Math.max(1, parsedPage) : 1;
+    const limitNum = Number.isFinite(parsedLimit) ? Math.min(100, Math.max(1, parsedLimit)) : 50;
     const rangeFrom = (pageNum - 1) * limitNum;
     const rangeTo = rangeFrom + limitNum - 1;
 

@@ -221,7 +221,7 @@ export async function importPropertiesEngine(
         // ──────────────────────────────────────────────────────
         view: item.view ?? "",
         type_id: item.typeId || null,
-        region_id: item.regionId ?? "",
+        region_id: item.regionId || null,
         featured: item.featured ?? false,
         agent_type: item.agentType ?? "direct",
         unit_type: item.unitType ?? "",

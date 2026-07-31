@@ -121,7 +121,8 @@ dashboardRouter.get("/stats", async (req, res) => {
 
 dashboardRouter.get("/activity", async (req, res) => {
   try {
-    const limit = Math.min(50, parseInt((req.query.limit as string) ?? "20"));
+    const parsedLimit = Number.parseInt((req.query.limit as string) ?? "20", 10);
+    const limit = Number.isFinite(parsedLimit) ? Math.min(50, Math.max(1, parsedLimit)) : 20;
 
     const { data, error } = await supabaseAdmin
       .from("audit_logs")

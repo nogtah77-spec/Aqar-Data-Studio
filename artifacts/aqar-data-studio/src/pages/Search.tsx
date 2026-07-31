@@ -17,7 +17,7 @@ export default function Search() {
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounceHook(query, 300);
 
-  const { data, isLoading } = useGlobalSearch(
+  const { data, isLoading, isError } = useGlobalSearch(
     { q: debouncedQuery, limit: 20 },
     { query: { enabled: debouncedQuery.length > 1, queryKey: ['search', debouncedQuery] } }
   );
@@ -41,7 +41,11 @@ export default function Search() {
             {isLoading ? "جاري البحث..." : `تم العثور على ${data?.total || 0} نتيجة`}
           </div>
 
-          {data?.results?.length ? (
+          {isError ? (
+            <div className="py-16 text-center text-muted-foreground">
+              تعذر تنفيذ البحث. حاول مرة أخرى.
+            </div>
+          ) : data?.results?.length ? (
             <div className="flex flex-col gap-3">
               {data.results.map((result) => (
               <Link key={`${result.type}-${result.id}`} href={

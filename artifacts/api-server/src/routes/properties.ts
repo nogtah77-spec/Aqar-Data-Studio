@@ -39,8 +39,10 @@ propertiesRouter.get("/", async (req, res) => {
       sortDir = "desc",
     } = req.query as Record<string, string>;
 
-    const pageNum = Math.max(1, parseInt(page));
-    const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
+    const parsedPage = Number.parseInt(page, 10);
+    const parsedLimit = Number.parseInt(limit, 10);
+    const pageNum = Number.isFinite(parsedPage) ? Math.max(1, parsedPage) : 1;
+    const limitNum = Number.isFinite(parsedLimit) ? Math.min(100, Math.max(1, parsedLimit)) : 20;
     const from = (pageNum - 1) * limitNum;
     const to = from + limitNum - 1;
 
@@ -57,8 +59,9 @@ propertiesRouter.get("/", async (req, res) => {
       );
 
     if (search) {
+      const safeSearch = search.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
       query = query.or(
-        `title.ilike.%${search}%,code.ilike.%${search}%,description.ilike.%${search}%,sub_area.ilike.%${search}%`
+        `title.ilike."%${safeSearch}%",code.ilike."%${safeSearch}%",description.ilike."%${safeSearch}%",sub_area.ilike."%${safeSearch}%"`
       );
     }
     if (regionId) query = query.eq("region_id", regionId);
@@ -145,7 +148,7 @@ propertiesRouter.post("/import", async (req, res) => {
 });
 
 // ── EXPORT ────────────────────────────────────────────────────────────────
-propertiesRouter.post("/export", async (req, res) => {
+propertiesRouter.post("/export", requireRole("admin", "agent"), async (req, res) => {
   try {
     const { format = "csv", columns, filters = {}, sortBy = "created_at", sortDir = "desc", inline = false } = req.body;
 

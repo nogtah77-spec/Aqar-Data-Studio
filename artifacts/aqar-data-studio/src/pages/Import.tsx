@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -277,6 +278,7 @@ function categoryColor(cat?: string) {
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function Import() {
+  const queryClient = useQueryClient();
   const currency = useCurrency();
   const { toast } = useToast();
   const [step, setStep] = useState<Step>("upload");
@@ -397,6 +399,14 @@ export default function Import() {
 
       const data = await res.json();
       setResult(data);
+      if (!dryRun) {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["properties"] }),
+          queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] }),
+          queryClient.invalidateQueries({ queryKey: ["dashboard-activity"] }),
+          queryClient.invalidateQueries({ queryKey: ["search"] }),
+        ]);
+      }
       setStep("results");
       toast({ title: dryRun ? "اكتملت معاينة الاستيراد" : "تم استيراد البيانات بنجاح" });
     } catch (err: any) {

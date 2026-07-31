@@ -76,6 +76,15 @@ const COLUMN_LABELS_READABLE: Record<string, string> = {
   createdAt: "تاريخ الإضافة",
 };
 
+function escapeHtml(value: unknown): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export async function exportPropertiesEngine(opts: ExportOptions): Promise<ExportResult> {
   const { format, columns = DEFAULT_COLUMNS, filters = {}, sortBy = "created_at", sortDir = "desc" } = opts;
 
@@ -159,11 +168,11 @@ export async function exportPropertiesEngine(opts: ExportOptions): Promise<Expor
   }
 
   if (format === "excel") {
-    const header = `<tr>${columns.map((c) => `<th>${COLUMN_LABELS[c] ?? c}</th>`).join("")}</tr>`;
+    const header = `<tr>${columns.map((c) => `<th>${escapeHtml(COLUMN_LABELS[c] ?? c)}</th>`).join("")}</tr>`;
     const body = rows
       .map(
         (r) =>
-          `<tr>${columns.map((c) => `<td>${r[c as keyof typeof r] ?? ""}</td>`).join("")}</tr>`
+          `<tr>${columns.map((c) => `<td>${escapeHtml(r[c as keyof typeof r])}</td>`).join("")}</tr>`
       )
       .join("");
     const html = `<html><head><meta charset="UTF-8"></head><body><table border="1">${header}${body}</table></body></html>`;
@@ -177,12 +186,12 @@ export async function exportPropertiesEngine(opts: ExportOptions): Promise<Expor
   if (format === "pdf") {
     // Generate a fully-styled, print-ready HTML document with RTL/Arabic support.
     // The client opens this in a new window and triggers window.print().
-    const colHeaders = columns.map((c) => COLUMN_LABELS_READABLE[c] ?? c);
+    const colHeaders = columns.map((c) => escapeHtml(COLUMN_LABELS_READABLE[c] ?? c));
     const tableRows = rows
       .map(
         (r) =>
           `<tr>${columns
-            .map((c) => `<td>${r[c as keyof typeof r] ?? ""}</td>`)
+            .map((c) => `<td>${escapeHtml(r[c as keyof typeof r])}</td>`)
             .join("")}</tr>`
       )
       .join("");
