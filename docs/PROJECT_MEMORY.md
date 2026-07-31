@@ -43,9 +43,9 @@ Durable architectural decisions are recorded in [`DECISIONS.md`](DECISIONS.md).
 - The repository contains the four agent-reference files:
   `AGENTS.md`, `docs/PROJECT_MEMORY.md`, `.github/copilot-instructions.md`, and
   `replit.md`.
-- The current implementation phase is the smart property analyzer. Work proceeds in the
-  requested order; later description, currency, UX, bilingual, import/export, and
-  performance phases remain pending until the analyzer phase is closed.
+- The current implementation phase is the professional description generator. Work
+  proceeds in the requested order; currency, UX, bilingual, import/export, and
+  performance phases remain pending until the current phase is closed.
 - Never force-push or overwrite remote work.
 
 ## Verification state
@@ -81,12 +81,14 @@ Durable architectural decisions are recorded in [`DECISIONS.md`](DECISIONS.md).
   additional details without repeating extracted facts.
 - The analyzer result contract is maintained through OpenAPI codegen, with Orval pinned
   to Zod 3 output compatibility.
+- The new-property smart parser now includes a client-side professional description
+  generator with Arabic/English output, an editable preview, clipboard copy, and
+  explicit insertion into the description field without overwriting existing text.
 
 ## Current next steps
 
-1. Add the professional copy-ready description box based on analyzer output.
-2. Expand the currency catalog with global currencies and flag labels.
-3. Continue the remaining UX, bilingual, import/export, and performance phases in order.
+1. Expand the currency catalog with global currencies and flag labels.
+2. Continue the remaining UX, bilingual, import/export, and performance phases in order.
 
 ## Current constraints
 

@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import {
   Save, ArrowRight, Loader2, Sparkles, CheckCircle2,
-  ChevronDown, ChevronUp, ImagePlus, X, Images,
+  ChevronDown, ChevronUp, ImagePlus, X, Images, Copy, Check,
 } from "lucide-react";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
@@ -25,12 +25,99 @@ import { useToast } from "@/hooks/use-toast";
 
 // ── Smart text parser widget ──────────────────────────────────────────────────
 
-function SmartParser({ onApply }: { onApply: (fields: Record<string, any>) => void }) {
+type DescriptionLanguage = "ar" | "en";
+
+const UNIT_LABELS: Record<string, { ar: string; en: string }> = {
+  apartment: { ar: "شقة", en: "apartment" },
+  duplex: { ar: "دوبلكس", en: "duplex" },
+  villa: { ar: "فيلا", en: "villa" },
+  penthouse: { ar: "بنتهاوس", en: "penthouse" },
+  townhouse: { ar: "تاون هاوس", en: "townhouse" },
+  twinhouse: { ar: "توين هاوس", en: "twin house" },
+  studio: { ar: "استوديو", en: "studio" },
+  shop: { ar: "محل", en: "shop" },
+  office: { ar: "مكتب", en: "office" },
+  clinic: { ar: "عيادة", en: "clinic" },
+  land: { ar: "أرض", en: "land" },
+  building: { ar: "عمارة", en: "building" },
+};
+
+function formatGeneratedPrice(value: unknown, currency?: string) {
+  if (value === undefined || value === null || value === "") return "";
+  const formatted = Number(value).toLocaleString("en-US");
+  return currency ? `${formatted} ${currency}` : formatted;
+}
+
+function generatePropertyDescription(parsed: Record<string, any>, language: DescriptionLanguage) {
+  const isArabic = language === "ar";
+  const unit = UNIT_LABELS[parsed.unitType]?.[language] ?? (isArabic ? "عقار" : "property");
+  const category = parsed.category === "rent"
+    ? (isArabic ? "للإيجار" : "for rent")
+    : (isArabic ? "للبيع" : "for sale");
+  const location = [parsed.subArea, parsed.regionName, parsed.location]
+    .filter(Boolean)
+    .filter((value, index, values) => values.indexOf(value) === index)
+    .join(isArabic ? "، " : ", ");
+  const facts = [
+    parsed.area !== undefined && (isArabic ? `بمساحة ${parsed.area} م²` : `${parsed.area} sqm`),
+    parsed.beds !== undefined && (isArabic ? `${parsed.beds} غرف` : `${parsed.beds} bedrooms`),
+    parsed.baths !== undefined && (isArabic ? `${parsed.baths} حمام` : `${parsed.baths} bathrooms`),
+    parsed.floorText && (isArabic ? `في ${parsed.floorText}` : `on the ${parsed.floorText}`),
+    parsed.finishing && (isArabic ? `بتشطيب ${parsed.finishing}` : `${parsed.finishing} finish`),
+    parsed.view && (isArabic ? `بإطلالة ${parsed.view}` : `${parsed.view} view`),
+  ].filter(Boolean);
+  const amenities = Array.isArray(parsed.amenities) ? parsed.amenities : [];
+  const amenityText = amenities.length
+    ? (isArabic ? `وتشمل المميزات ${amenities.join("، ")}` : `Features include ${amenities.join(", ")}`)
+    : "";
+  const price = formatGeneratedPrice(parsed.price, parsed.currency);
+  const priceText = price
+    ? (isArabic ? `السعر ${price}` : `priced at ${price}`)
+    : "";
+  const details = Array.isArray(parsed.additionalDetails)
+    ? parsed.additionalDetails.filter(Boolean).join(isArabic ? "، " : ", ")
+    : "";
+
+  if (isArabic) {
+    return [
+      `${unit} ${category}${location ? ` في ${location}` : ""}.`,
+      facts.length ? `تتميز بـ${facts.join("، ")}.` : "",
+      amenityText ? `${amenityText}.` : "",
+      parsed.furnished === "مفروش" ? "العقار مفروش بالكامل." : "",
+      parsed.parking === "نعم" ? "يتوفر موقف سيارات." : "",
+      parsed.elevator === "نعم" ? "يتوفر مصعد." : "",
+      priceText ? `${priceText}.` : "",
+      details ? `تفاصيل إضافية: ${details}.` : "",
+    ].filter(Boolean).join(" ");
+  }
+
+  return [
+    `${unit} ${category}${location ? ` in ${location}` : ""}.`,
+    facts.length ? `It offers ${facts.join(", ")}.` : "",
+    amenityText ? `${amenityText}.` : "",
+    parsed.furnished === "مفروش" ? "The property is fully furnished." : "",
+    parsed.parking === "نعم" ? "Dedicated parking is available." : "",
+    parsed.elevator === "نعم" ? "Elevator access is available." : "",
+    priceText ? `${priceText}.` : "",
+    details ? `Additional details: ${details}.` : "",
+  ].filter(Boolean).join(" ");
+}
+
+function SmartParser({
+  onApply,
+  onApplyDescription,
+}: {
+  onApply: (fields: Record<string, any>) => void;
+  onApplyDescription: (description: string) => void;
+}) {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [parsed, setParsed] = useState<Record<string, any> | null>(null);
   const [error, setError] = useState("");
   const [open, setOpen] = useState(true);
+  const [descriptionLanguage, setDescriptionLanguage] = useState<DescriptionLanguage>("ar");
+  const [generatedDescription, setGeneratedDescription] = useState("");
+  const [copied, setCopied] = useState(false);
 
   const handleParse = async () => {
     if (!text.trim()) return;
@@ -46,6 +133,8 @@ function SmartParser({ onApply }: { onApply: (fields: Record<string, any>) => vo
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "فشل التحليل");
       setParsed(data);
+      setGeneratedDescription("");
+      setCopied(false);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -73,6 +162,22 @@ function SmartParser({ onApply }: { onApply: (fields: Record<string, any>) => vo
     : [];
 
   const confidence = parsed?.confidence ?? 0;
+  const handleGenerateDescription = () => {
+    if (!parsed) return;
+    setGeneratedDescription(generatePropertyDescription(parsed, descriptionLanguage));
+    setCopied(false);
+  };
+
+  const handleCopyDescription = async () => {
+    if (!generatedDescription) return;
+    try {
+      await navigator.clipboard.writeText(generatedDescription);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setError("تعذر نسخ الوصف. حدده وانسخه يدوياً.");
+    }
+  };
 
   return (
     <Card className="border-primary/30 bg-primary/[0.02]">
@@ -154,6 +259,60 @@ function SmartParser({ onApply }: { onApply: (fields: Record<string, any>) => vo
               >
                 <CheckCircle2 size={14} /> تطبيق على النموذج
               </Button>
+
+              <div className="rounded-lg border border-primary/20 bg-background/70 p-3 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold">مولّد وصف احترافي</p>
+                    <p className="text-xs text-muted-foreground">أنشئ نصاً جاهزاً للنشر من البيانات المؤكدة فقط.</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex rounded-md border p-0.5 bg-muted/40">
+                      {(["ar", "en"] as DescriptionLanguage[]).map((language) => (
+                        <button
+                          key={language}
+                          type="button"
+                          className={cn(
+                            "px-2.5 py-1 text-xs rounded-sm transition-colors",
+                            descriptionLanguage === language ? "bg-background shadow-sm font-semibold" : "text-muted-foreground"
+                          )}
+                          onClick={() => {
+                            setDescriptionLanguage(language);
+                            setGeneratedDescription("");
+                          }}
+                        >
+                          {language === "ar" ? "العربية" : "English"}
+                        </button>
+                      ))}
+                    </div>
+                    <Button type="button" size="sm" variant="secondary" className="gap-1.5" onClick={handleGenerateDescription}>
+                      <Sparkles size={14} /> إنشاء الوصف
+                    </Button>
+                  </div>
+                </div>
+
+                {generatedDescription && (
+                  <>
+                    <Textarea
+                      value={generatedDescription}
+                      onChange={(event) => setGeneratedDescription(event.target.value)}
+                      rows={4}
+                      dir={descriptionLanguage === "ar" ? "rtl" : "ltr"}
+                      className="resize-y text-sm leading-6 bg-background"
+                      aria-label="الوصف الاحترافي المقترح"
+                    />
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button type="button" size="sm" className="gap-1.5" onClick={() => onApplyDescription(generatedDescription)}>
+                        <CheckCircle2 size={14} /> إدراج في الوصف
+                      </Button>
+                      <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={handleCopyDescription}>
+                        {copied ? <Check size={14} /> : <Copy size={14} />}
+                        {copied ? "تم النسخ" : "نسخ الوصف"}
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           )}
         </CardContent>
@@ -415,6 +574,11 @@ export default function PropertyForm() {
 
   // Apply smart parser results
   const applyParsed = (parsed: Record<string, any>) => {
+    const contactNotes = [
+      parsed.sourceEmail && `البريد: ${parsed.sourceEmail}`,
+      parsed.sourcePhones?.length && `الهاتف: ${parsed.sourcePhones.join("، ")}`,
+    ].filter(Boolean).join("، ");
+
     setForm((prev) => ({
       ...prev,
       ...(parsed.area      !== undefined && { area:      String(parsed.area) }),
@@ -431,8 +595,7 @@ export default function PropertyForm() {
       ...(parsed.elevator !== undefined && { elevator:   parsed.elevator }),
       ...(parsed.location !== undefined && { location:   parsed.location }),
       ...(parsed.source   !== undefined && { source:     parsed.source }),
-      ...(parsed.sourceEmail !== undefined && { sourceNotes: `البريد: ${parsed.sourceEmail}` }),
-      ...(parsed.sourcePhones?.length && { sourceNotes: `الهاتف: ${parsed.sourcePhones.join("، ")}` }),
+      ...(contactNotes && { sourceNotes: contactNotes }),
       ...(parsed.amenities?.length && { notes: parsed.amenities.join("، ") }),
       ...(parsed.description !== undefined && { description: prev.description || parsed.description }),
       ...(parsed.regionId  !== undefined && { regionId:  parsed.regionId }),
@@ -518,7 +681,20 @@ export default function PropertyForm() {
 
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Smart parser — only show on new property */}
-        {!isEdit && <SmartParser onApply={applyParsed} />}
+        {!isEdit && (
+          <SmartParser
+            onApply={applyParsed}
+            onApplyDescription={(description) => {
+              setForm((previous) => ({
+                ...previous,
+                description: previous.description.trim()
+                  ? `${previous.description.trim()}\n\n${description}`
+                  : description,
+              }));
+              toast({ title: "تم إدراج الوصف الاحترافي" });
+            }}
+          />
+        )}
 
         {/* Core fields */}
         <Card>
