@@ -3,3 +3,4 @@
 - [API early-return pattern](api-early-return.md) — every early res.status() in Express 5 must be prefixed with return void
 - [Vercel Express typing](vercel-express-typing.md) — Vercel serverless entries should import the bundled API, not shared Express TypeScript sources
 - [GitHub push auth](github-push-auth.md) — use the managed GitHub push path when CLI Git lacks credentials
+- [Reference-table status updates](reference-table-status-updates.md) — do not depend on PostgREST returning a deactivated row after an update

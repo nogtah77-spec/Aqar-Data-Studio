@@ -63,22 +63,41 @@ regionsRouter.post("/", async (req, res) => {
 
 regionsRouter.patch("/:id", async (req, res) => {
   try {
+    const { data: before, error: beforeError } = await supabaseAdmin
+      .from("regions")
+      .select("id, name, active")
+      .eq("id", req.params.id)
+      .maybeSingle();
+
+    if (beforeError) throw beforeError;
+    if (!before) return void res.status(404).json({ error: "Region not found" });
+
     const updates: Record<string, any> = {};
     if (req.body.name !== undefined) updates.name = req.body.name;
     if (req.body.active !== undefined) updates.active = req.body.active;
+    if (Object.keys(updates).length === 0) {
+      return void res.status(400).json({ error: "At least one update is required" });
+    }
 
-    const { data, error } = await supabaseAdmin
+    const { error, count } = await supabaseAdmin
       .from("regions")
-      .update(updates)
-      .eq("id", req.params.id)
-      .select()
-      .single();
+      .update(updates, { count: "exact" })
+      .eq("id", req.params.id);
 
     if (error) throw error;
-    await logAudit({ action: "update", resourceType: "region", resourceId: req.params.id });
-    res.json({ ...data, propertyCount: 0 });
+    if (count !== 1) return void res.status(404).json({ error: "Region not found" });
+
+    const data = { ...before, ...updates };
+    await logAudit({
+      action: "update",
+      resourceType: "region",
+      resourceId: req.params.id,
+      before,
+      after: data,
+    });
+    return void res.json({ ...data, propertyCount: 0 });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return void res.status(500).json({ error: err.message });
   }
 });
 
