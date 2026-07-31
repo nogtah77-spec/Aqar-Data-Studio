@@ -43,9 +43,8 @@ Durable architectural decisions are recorded in [`DECISIONS.md`](DECISIONS.md).
 - The repository contains the four agent-reference files:
   `AGENTS.md`, `docs/PROJECT_MEMORY.md`, `.github/copilot-instructions.md`, and
   `replit.md`.
-- The current implementation phase is UX refinement. Work proceeds in the requested
-  order; bilingual, import/export, and performance phases remain pending until the
-  current phase is closed.
+- The current implementation phase is Arabic/English interface support. Work proceeds
+  in the requested order; import/export improvements are next, followed by performance.
 - Never force-push or overwrite remote work.
 
 ## Verification state
@@ -90,11 +89,17 @@ Durable architectural decisions are recorded in [`DECISIONS.md`](DECISIONS.md).
 - The property list now has explicit refresh/loading feedback, retryable error states,
   clearer empty states, search clearing, filter-aware reset behavior, selection reset
   on query/page changes, and keyboard-visible action controls.
+- Arabic/English interface support now uses a central React language context backed by
+  the saved settings language. It updates document language/direction and covers the
+  shared layout, login, dashboard, search, comparison, property list/detail, settings,
+  users, audit logs, import, export, and not-found states. Currency, price, area, and
+  date formatting follow the selected language; unauthenticated language switching
+  remains disabled because the setting is account-backed.
 
 ## Current next steps
 
-1. Complete Arabic/English interface coverage.
-2. Improve import/export, then performance, in that order.
+1. Improve import/export behavior and UX.
+2. Improve performance without architectural changes.
 
 ## Current constraints
 
@@ -103,3 +108,5 @@ Durable architectural decisions are recorded in [`DECISIONS.md`](DECISIONS.md).
   Replit settings without explicit owner approval.
 - Do not add demo or test property records.
 - Do not edit generated API clients directly.
+- Authenticated end-to-end testing with admin, agent, and viewer sessions remains
+  intentionally excluded; it requires real user sessions and existing data.

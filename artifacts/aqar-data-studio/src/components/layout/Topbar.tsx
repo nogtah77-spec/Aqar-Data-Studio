@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { MobileSidebar } from "./Sidebar";
 import { useTheme } from "@/lib/theme";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
@@ -14,16 +15,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const ROLE_LABELS: Record<string, { label: string; icon: typeof Shield }> = {
-  admin: { label: "مدير", icon: Shield },
-  agent: { label: "وسيط", icon: User },
-  viewer: { label: "مشاهد", icon: Eye },
+const ROLE_LABELS: Record<string, { key: "role.admin" | "role.agent" | "role.viewer"; icon: typeof Shield }> = {
+  admin: { key: "role.admin", icon: Shield },
+  agent: { key: "role.agent", icon: User },
+  viewer: { key: "role.viewer", icon: Eye },
 };
 
 function UserMenu() {
   const { user, profile, signOut } = useAuth();
+  const { t } = useLanguage();
 
-  const displayName = profile?.name ?? user?.email?.split("@")[0] ?? "مستخدم";
+  const displayName = profile?.name ?? user?.email?.split("@")[0] ?? t("role.viewer");
   const initials = displayName.slice(0, 2).toUpperCase();
   const role = profile?.role ?? "viewer";
   const roleInfo = ROLE_LABELS[role] ?? ROLE_LABELS.viewer;
@@ -34,7 +36,7 @@ function UserMenu() {
       <DropdownMenuTrigger asChild>
         <button
           className="w-8 h-8 rounded-full bg-[#2F4156] text-white flex items-center justify-center font-bold text-xs shadow-sm hover:opacity-90 transition-opacity select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          aria-label="قائمة المستخدم"
+          aria-label={t("topbar.userMenu")}
         >
           {initials}
         </button>
@@ -50,7 +52,7 @@ function UserMenu() {
         <div className="px-2 pb-1">
           <span className="inline-flex items-center gap-1 text-xs bg-muted rounded px-1.5 py-0.5 text-muted-foreground">
             <RoleIcon size={10} />
-            {roleInfo.label}
+            {t(roleInfo.key)}
           </span>
         </div>
 
@@ -62,7 +64,7 @@ function UserMenu() {
           className="text-destructive focus:text-destructive focus:bg-destructive/10 gap-2 cursor-pointer"
         >
           <LogOut size={14} />
-          تسجيل الخروج
+          {t("topbar.signOut")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -72,6 +74,7 @@ function UserMenu() {
 export function Topbar() {
   const { theme, toggle } = useTheme();
   const { isAgent } = useAuth();
+  const { t, isArabic } = useLanguage();
 
   const openShortcuts = () => window.dispatchEvent(new CustomEvent("aqar:shortcuts-help"));
 
@@ -87,7 +90,7 @@ export function Topbar() {
           className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-lg text-sm text-muted-foreground hover:bg-muted transition-colors w-full max-w-md cursor-pointer border border-transparent hover:border-border"
         >
           <Search size={15} className="shrink-0" />
-          <span className="truncate">البحث الشامل…</span>
+          <span className="truncate">{t("topbar.globalSearch")}</span>
           <kbd className="ms-auto hidden sm:inline-flex h-5 items-center gap-1 rounded border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground shadow-sm shrink-0">
             <span className="text-xs">⌘</span>K
           </kbd>
@@ -104,13 +107,13 @@ export function Topbar() {
               size="icon"
               className="h-8 w-8 hidden sm:flex"
               onClick={openShortcuts}
-              aria-label="اختصارات لوحة المفاتيح"
+              aria-label={t("topbar.shortcuts")}
             >
               <Keyboard size={16} />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom">
-            <p className="text-xs">اختصارات لوحة المفاتيح (؟)</p>
+            <p className="text-xs">{t("topbar.shortcuts")} ({isArabic ? "؟" : "?"})</p>
           </TooltipContent>
         </Tooltip>
 
@@ -122,7 +125,7 @@ export function Topbar() {
               size="icon"
               className="h-8 w-8"
               onClick={toggle}
-              aria-label={theme === "dark" ? "الوضع النهاري" : "الوضع الليلي"}
+              aria-label={theme === "dark" ? t("topbar.dayMode") : t("topbar.nightMode")}
             >
               {theme === "dark" ? (
                 <Sun size={16} className="text-yellow-500" />
@@ -132,7 +135,7 @@ export function Topbar() {
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom">
-            <p className="text-xs">{theme === "dark" ? "الوضع النهاري" : "الوضع الليلي"}</p>
+            <p className="text-xs">{theme === "dark" ? t("topbar.dayMode") : t("topbar.nightMode")}</p>
           </TooltipContent>
         </Tooltip>
 
@@ -141,8 +144,8 @@ export function Topbar() {
           <Button asChild size="sm" className="gap-1.5 shadow-sm font-semibold hidden xs:flex">
             <Link href="/properties/new">
               <Plus size={15} />
-              <span className="hidden sm:inline">عقار جديد</span>
-              <span className="sm:hidden">جديد</span>
+              <span className="hidden sm:inline">{t("topbar.newProperty")}</span>
+              <span className="sm:hidden">{t("topbar.new")}</span>
             </Link>
           </Button>
         )}

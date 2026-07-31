@@ -2,6 +2,7 @@ import { useGetDashboardStats, useGetDashboardActivity } from "@workspace/api-cl
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
 import { useCurrency } from "@/hooks/use-currency";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   Building2, TrendingUp, Wallet, CheckCircle2, Clock,
   BarChart3, Star,
@@ -16,12 +17,6 @@ import {
 
 const CHART_COLORS = ["#2F4156", "#567C8D", "#C8D9E6", "#8fafbe", "#a3b9c9", "#7a9fb3"];
 
-const CATEGORY_LABELS: Record<string, string> = {
-  sale: "بيع",
-  rent: "إيجار",
-  investment: "استثمار",
-};
-
 const STATUS_COLORS: Record<string, string> = {
   active: "#22c55e",
   draft:  "#94a3b8",
@@ -32,14 +27,14 @@ const STATUS_COLORS: Record<string, string> = {
 
 // ── Custom tooltip ────────────────────────────────────────────────────────────
 
-function CustomTooltip({ active, payload, label }: any) {
+function CustomTooltip({ active, payload, label, language }: any) {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-card border border-border rounded-lg px-3 py-2 shadow-lg text-sm">
       <p className="font-semibold text-foreground mb-1">{label}</p>
       {payload.map((p: any, i: number) => (
         <p key={i} className="text-muted-foreground">
-          {p.name}: <span className="font-bold text-foreground">{p.value?.toLocaleString("ar-EG")}</span>
+          {p.name}: <span className="font-bold text-foreground">{p.value?.toLocaleString(language === "ar" ? "ar-EG" : "en-US")}</span>
         </p>
       ))}
     </div>
@@ -97,6 +92,7 @@ function KPICard({
 
 export default function Dashboard() {
   const currency = useCurrency();
+  const { t, language } = useLanguage();
   const { data: stats, isLoading: statsLoading } = useGetDashboardStats({
     query: { queryKey: ["dashboard-stats"] },
   });
@@ -119,13 +115,17 @@ export default function Dashboard() {
   }));
 
   const byCategoryData = (stats?.byCategory ?? []).map((c: any) => ({
-    name: CATEGORY_LABELS[c.category] ?? c.category,
+    name: language === "ar"
+      ? ({ sale: "بيع", rent: "إيجار", investment: "استثمار" } as Record<string, string>)[c.category] ?? c.category
+      : ({ sale: "Sale", rent: "Rent", investment: "Investment" } as Record<string, string>)[c.category] ?? c.category,
     count: c.count,
     value: c.value,
   }));
 
   const byStatusData = (stats?.byStatus ?? []).map((s: any) => ({
-    name: s.status,
+    name: language === "ar"
+      ? ({ active: "نشط", draft: "مسودة", sold: "مباع", rented: "مؤجر", listed: "معروض" } as Record<string, string>)[s.status] ?? s.status
+      : ({ active: "Active", draft: "Draft", sold: "Sold", rented: "Rented", listed: "Listed" } as Record<string, string>)[s.status] ?? s.status,
     value: s.count,
     fill: STATUS_COLORS[s.status] ?? "#94a3b8",
   }));
@@ -139,40 +139,42 @@ export default function Dashboard() {
     <div className="space-y-6">
       {/* Page title */}
       <div>
-        <h2 className="text-xl sm:text-2xl font-bold tracking-tight">نظرة عامة</h2>
-        <p className="text-muted-foreground text-sm">مرحباً بك في لوحة تحكم استوديو بيانات عقار.</p>
+        <h2 className="text-xl sm:text-2xl font-bold tracking-tight">{t("dashboard.title")}</h2>
+        <p className="text-muted-foreground text-sm">{t("dashboard.welcome")}</p>
       </div>
 
       {/* ── KPI row ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <KPICard
-          label="إجمالي العقارات"
+          label={t("dashboard.totalProperties")}
           value={stats?.totalProperties ?? 0}
-          sub={`+${stats?.thisMonthAdded ?? 0} هذا الشهر${growthPct !== null ? ` (${growthPct > 0 ? "+" : ""}${growthPct}%)` : ""}`}
+          sub={language === "ar"
+            ? `+${stats?.thisMonthAdded ?? 0} هذا الشهر${growthPct !== null ? ` (${growthPct > 0 ? "+" : ""}${growthPct}%)` : ""}`
+            : `+${stats?.thisMonthAdded ?? 0} this month${growthPct !== null ? ` (${growthPct > 0 ? "+" : ""}${growthPct}%)` : ""}`}
           icon={Building2}
           iconBg="bg-primary/10"
           iconColor="text-primary"
         />
         <KPICard
-          label="عقارات نشطة"
+          label={t("dashboard.activeProperties")}
           value={stats?.activeProperties ?? 0}
-          sub="جاهزة للعرض"
+          sub={t("dashboard.readyToShow")}
           icon={CheckCircle2}
           iconBg="bg-green-500/10"
           iconColor="text-green-600"
         />
         <KPICard
-          label="إجمالي القيمة"
-          value={<span className="text-secondary">{formatPrice(stats?.totalValue, currency)}</span>}
-          sub="القيمة التقديرية الإجمالية"
+          label={t("dashboard.totalValue")}
+          value={<span className="text-secondary">{formatPrice(stats?.totalValue, currency, language)}</span>}
+          sub={t("dashboard.estimatedValue")}
           icon={Wallet}
           iconBg="bg-secondary/10"
           iconColor="text-secondary"
         />
         <KPICard
-          label="متوسط السعر"
-          value={formatPrice(stats?.avgPrice, currency)}
-          sub={`متوسط المساحة: ${stats?.avgArea ?? 0} م²`}
+          label={t("dashboard.averagePrice")}
+          value={formatPrice(stats?.avgPrice, currency, language)}
+          sub={`${t("dashboard.averageArea")}: ${stats?.avgArea ?? 0} ${language === "ar" ? "م²" : "sqm"}`}
           icon={TrendingUp}
           iconBg="bg-amber-500/10"
           iconColor="text-amber-600"
@@ -182,33 +184,33 @@ export default function Dashboard() {
       {/* ── Second KPI row ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <KPICard
-          label="مميز"
+          label={t("dashboard.featured")}
           value={stats?.featuredProperties ?? 0}
-          sub="عقارات مميزة"
+          sub={t("dashboard.featuredProperties")}
           icon={Star}
           iconBg="bg-yellow-500/10"
           iconColor="text-yellow-600"
         />
         <KPICard
-          label="مسودة"
+          label={t("dashboard.draft")}
           value={stats?.draftProperties ?? 0}
-          sub="بانتظار النشر"
+          sub={t("dashboard.awaitingPublish")}
           icon={Building2}
           iconBg="bg-slate-500/10"
           iconColor="text-slate-500"
         />
         <KPICard
-          label="مباع"
+          label={t("dashboard.sold")}
           value={stats?.soldProperties ?? 0}
-          sub="تم بيعه"
+          sub={t("dashboard.soldProperties")}
           icon={CheckCircle2}
           iconBg="bg-red-500/10"
           iconColor="text-red-500"
         />
         <KPICard
-          label="مؤجر"
+          label={t("dashboard.rented")}
           value={stats?.rentedProperties ?? 0}
-          sub="تم تأجيره"
+          sub={t("dashboard.rentedProperties")}
           icon={CheckCircle2}
           iconBg="bg-blue-500/10"
           iconColor="text-blue-500"
@@ -222,7 +224,7 @@ export default function Dashboard() {
           <CardHeader className="pb-3 border-b border-border/50">
             <CardTitle className="flex items-center gap-2 text-base">
               <BarChart3 size={18} className="text-primary" />
-              العقارات حسب المنطقة
+              {t("dashboard.byRegion")}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
@@ -247,8 +249,8 @@ export default function Dashboard() {
                     axisLine={false}
                     allowDecimals={false}
                   />
-                  <Tooltip content={<CustomTooltip />} cursor={{ fill: "var(--muted)", opacity: 0.5 }} />
-                  <Bar dataKey="count" name="العقارات" fill="#2F4156" radius={[4, 4, 0, 0]}>
+                  <Tooltip content={<CustomTooltip language={language} />} cursor={{ fill: "var(--muted)", opacity: 0.5 }} />
+                  <Bar dataKey="count" name={t("dashboard.properties")} fill="#2F4156" radius={[4, 4, 0, 0]}>
                     {byRegionData.map((_: any, i: number) => (
                       <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                     ))}
@@ -262,7 +264,7 @@ export default function Dashboard() {
         {/* By Status pie chart */}
         <Card>
           <CardHeader className="pb-3 border-b border-border/50">
-            <CardTitle className="text-base">الحالات</CardTitle>
+            <CardTitle className="text-base">{t("dashboard.byStatus")}</CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
             {byStatusData.length === 0 ? (
@@ -311,7 +313,7 @@ export default function Dashboard() {
         {/* By Category */}
         <Card>
           <CardHeader className="pb-3 border-b border-border/50">
-            <CardTitle className="text-base">حسب الفئة (بيع / إيجار)</CardTitle>
+            <CardTitle className="text-base">{t("dashboard.byCategory")}</CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
             {byCategoryData.length === 0 ? (
@@ -331,8 +333,8 @@ export default function Dashboard() {
                     axisLine={false}
                     allowDecimals={false}
                   />
-                  <Tooltip content={<CustomTooltip />} cursor={{ fill: "var(--muted)", opacity: 0.5 }} />
-                  <Bar dataKey="count" name="العدد" radius={[4, 4, 0, 0]}>
+                  <Tooltip content={<CustomTooltip language={language} />} cursor={{ fill: "var(--muted)", opacity: 0.5 }} />
+                  <Bar dataKey="count" name={t("dashboard.count")} radius={[4, 4, 0, 0]}>
                     {byCategoryData.map((_: any, i: number) => (
                       <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                     ))}
@@ -346,7 +348,7 @@ export default function Dashboard() {
         {/* By Type */}
         <Card>
           <CardHeader className="pb-3 border-b border-border/50">
-            <CardTitle className="text-base">حسب نوع العقار</CardTitle>
+            <CardTitle className="text-base">{t("dashboard.byType")}</CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
             {byTypeData.length === 0 ? (
@@ -371,7 +373,7 @@ export default function Dashboard() {
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(val: any) => [val, "عدد"]}
+                    formatter={(val: any) => [val, t("dashboard.count")]}
                     contentStyle={{
                       background: "var(--card)",
                       border: "1px solid var(--border)",
@@ -389,9 +391,9 @@ export default function Dashboard() {
       {/* ── Activity feed ── */}
       <Card>
         <CardHeader className="border-b border-border/50 pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
+            <CardTitle className="flex items-center gap-2 text-base">
             <Clock className="w-4 h-4 text-muted-foreground" />
-            أحدث النشاطات
+            {t("dashboard.latestActivity")}
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-4">
@@ -401,18 +403,18 @@ export default function Dashboard() {
                 <div className="w-2 h-2 rounded-full bg-primary mt-2 shrink-0" />
                 <div className="flex-1 flex flex-col sm:flex-row sm:items-center justify-between gap-1 min-w-0">
                   <div className="min-w-0">
-                    <span className="font-semibold">{entry.userName ?? "نظام"}</span>{" "}
-                    قام بـ{" "}
+                    <span className="font-semibold">{entry.userName ?? t("dashboard.system")}</span>{" "}
+                    {t("dashboard.did")}{" "}
                     <Badge variant="outline" className="mx-0.5 text-[10px]">
                       {entry.action}
                     </Badge>{" "}
-                    في <span className="font-medium">{entry.resourceType}</span>
+                    {t("dashboard.at")} <span className="font-medium">{entry.resourceType}</span>
                     {entry.resourceLabel && (
                       <span className="text-muted-foreground"> ({entry.resourceLabel})</span>
                     )}
                   </div>
                   <div className="text-muted-foreground text-xs shrink-0">
-                    {new Date(entry.createdAt).toLocaleDateString("ar-EG", {
+                    {new Date(entry.createdAt).toLocaleDateString(language === "ar" ? "ar-EG" : "en-US", {
                       month: "short",
                       day: "numeric",
                       hour: "2-digit",
@@ -424,7 +426,7 @@ export default function Dashboard() {
             ))}
             {(!Array.isArray(activity) || activity.length === 0) && (
               <div className="text-muted-foreground py-10 text-center bg-muted/20 rounded-xl border border-dashed text-sm">
-                لا توجد نشاطات حديثة
+                {t("dashboard.noRecentActivity")}
               </div>
             )}
           </div>
@@ -435,9 +437,10 @@ export default function Dashboard() {
 }
 
 function EmptyChart() {
+  const { t } = useLanguage();
   return (
     <div className="h-[180px] flex items-center justify-center text-muted-foreground text-sm bg-muted/20 rounded-xl border border-dashed">
-      لا توجد بيانات بعد
+      {t("dashboard.noData")}
     </div>
   );
 }

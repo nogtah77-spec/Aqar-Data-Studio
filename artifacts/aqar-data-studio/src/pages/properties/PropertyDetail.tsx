@@ -9,6 +9,7 @@ import { formatPrice, formatArea } from "@/lib/utils";
 import { uploadPropertyImage } from "@/lib/supabase";
 import { useCurrency } from "@/hooks/use-currency";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowRight, Edit, MapPin, Home, Bed, Bath, Frame,
@@ -31,6 +32,7 @@ export default function PropertyDetail() {
   const [lightbox, setLightbox] = useState<string | null>(null);
   const currency = useCurrency();
   const { isAgent } = useAuth();
+  const { t, language } = useLanguage();
   const { toast } = useToast();
 
   const { data: property, isLoading } = useGetProperty(params.id!, {
@@ -61,10 +63,10 @@ export default function PropertyDetail() {
           data: { images: [...existingImages, ...uploaded] } as any,
         });
         qc.invalidateQueries({ queryKey: ["property", params.id] });
-        toast({ title: "تم رفع الصور" });
+        toast({ title: language === "ar" ? "تم رفع الصور" : "Photos uploaded" });
       }
     } catch (err: any) {
-      setUploadError(err.message ?? "فشل رفع الصورة");
+      setUploadError(err.message ?? (language === "ar" ? "فشل رفع الصورة" : "Could not upload the image"));
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
@@ -78,20 +80,20 @@ export default function PropertyDetail() {
     try {
       await updateProperty({ id: property.id, data: { images: imgs } as any });
       qc.invalidateQueries({ queryKey: ["property", params.id] });
-      toast({ title: "تم حذف الصورة" });
+      toast({ title: language === "ar" ? "تم حذف الصورة" : "Photo deleted" });
     } catch (err: any) {
-      setUploadError(err.message ?? "فشل حذف الصورة");
+      setUploadError(err.message ?? (language === "ar" ? "فشل حذف الصورة" : "Could not delete the image"));
     }
   };
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
   if (isLoading) {
-    return <div className="p-8 text-center text-muted-foreground animate-pulse">جاري التحميل...</div>;
+    return <div className="p-8 text-center text-muted-foreground animate-pulse">{t("detail.loading")}</div>;
   }
 
   if (!property) {
-    return <div className="p-8 text-center text-destructive">العقار غير موجود</div>;
+    return <div className="p-8 text-center text-destructive">{t("detail.notFound")}</div>;
   }
 
   const images: string[] = (property as any).images ?? [];
@@ -106,7 +108,7 @@ export default function PropertyDetail() {
         >
           <img
             src={lightbox}
-            alt="صورة العقار"
+            alt={language === "ar" ? "صورة العقار" : "Property image"}
             className="max-w-full max-h-full rounded-xl shadow-2xl object-contain"
             onClick={(e) => e.stopPropagation()}
           />
@@ -151,7 +153,7 @@ export default function PropertyDetail() {
              {isAgent && <Button asChild className="gap-2">
               <Link href={`/properties/${property.id}/edit`}>
                 <Edit size={16} />
-                تعديل
+                {t("detail.edit")}
               </Link>
              </Button>}
           </div>
@@ -162,7 +164,7 @@ export default function PropertyDetail() {
             {/* Image gallery */}
             <Card>
               <CardHeader className="flex-row items-center justify-between pb-3 border-b">
-                <CardTitle className="text-base">معرض الصور</CardTitle>
+                <CardTitle className="text-base">{t("detail.gallery")}</CardTitle>
                 <div className="flex items-center gap-2">
                   {uploading && <Loader2 size={15} className="animate-spin text-muted-foreground" />}
                    {isAgent && (
@@ -174,7 +176,7 @@ export default function PropertyDetail() {
                        disabled={uploading}
                      >
                        <ImagePlus size={13} />
-                       {uploading ? "جاري الرفع…" : "رفع صورة"}
+                        {uploading ? t("detail.uploading") : t("detail.upload")}
                      </Button>
                    )}
                   <input
@@ -211,7 +213,7 @@ export default function PropertyDetail() {
                           <button
                             onClick={() => setLightbox(img)}
                             className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center text-white transition-colors"
-                            title="عرض"
+                           title={t("detail.view")}
                           >
                             <ExternalLink size={14} />
                           </button>
@@ -219,7 +221,7 @@ export default function PropertyDetail() {
                              <button
                                onClick={() => handleDeleteImage(i)}
                                className="w-8 h-8 rounded-full bg-red-500/70 hover:bg-red-500 flex items-center justify-center text-white transition-colors"
-                               title="حذف"
+                               title={t("detail.delete")}
                              >
                                <Trash2 size={14} />
                              </button>
@@ -232,14 +234,14 @@ export default function PropertyDetail() {
                       onClick={() => fileRef.current?.click()}
                     >
                       <Frame size={48} className="mb-4 opacity-20" />
-                      <p className="text-sm">لا توجد صور — انقر لرفع صور</p>
+                       <p className="text-sm">{t("detail.noImages")}</p>
                       <p className="text-xs mt-1 opacity-60">JPG، PNG، WebP</p>
                     </div>
                   )}
                 </div>
                 {images.length > 0 && (
                   <p className="text-[11px] text-muted-foreground mt-2">
-                    {images.length} صورة · انقر على صورة للعرض الكامل · حوّم للحذف
+                     {images.length} {t("detail.imageCount")} · {t("detail.imageHint")}
                   </p>
                 )}
               </CardContent>
@@ -250,25 +252,25 @@ export default function PropertyDetail() {
               <CardContent className="p-6">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                   <div className="space-y-1">
-                    <span className="text-muted-foreground text-xs uppercase tracking-wider font-semibold">السعر</span>
-                     <div className="font-bold text-lg text-primary">{formatPrice(property.price, currency)}</div>
+                    <span className="text-muted-foreground text-xs uppercase tracking-wider font-semibold">{t("detail.price")}</span>
+                     <div className="font-bold text-lg text-primary">{formatPrice(property.price, currency, language)}</div>
                   </div>
                   <div className="space-y-1">
-                    <span className="text-muted-foreground text-xs uppercase tracking-wider font-semibold">المساحة</span>
+                     <span className="text-muted-foreground text-xs uppercase tracking-wider font-semibold">{t("detail.area")}</span>
                     <div className="font-bold text-lg flex items-center gap-2">
                       <Frame size={18} className="text-muted-foreground" />
-                      {formatArea(property.area)}
+                       {formatArea(property.area, language)}
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <span className="text-muted-foreground text-xs uppercase tracking-wider font-semibold">غرف النوم</span>
+                     <span className="text-muted-foreground text-xs uppercase tracking-wider font-semibold">{t("detail.beds")}</span>
                     <div className="font-bold text-lg flex items-center gap-2">
                       <Bed size={18} className="text-muted-foreground" />
                       {property.beds || "-"}
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <span className="text-muted-foreground text-xs uppercase tracking-wider font-semibold">الحمامات</span>
+                     <span className="text-muted-foreground text-xs uppercase tracking-wider font-semibold">{t("detail.baths")}</span>
                     <div className="font-bold text-lg flex items-center gap-2">
                       <Bath size={18} className="text-muted-foreground" />
                       {property.baths || "-"}
@@ -281,12 +283,12 @@ export default function PropertyDetail() {
             {/* Description */}
             <Card>
               <CardHeader>
-                <CardTitle>الوصف</CardTitle>
+                <CardTitle>{t("detail.description")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="whitespace-pre-wrap text-sm leading-relaxed">
                   {property.description || (
-                    <span className="text-muted-foreground italic">لا يوجد وصف متاح.</span>
+                    <span className="text-muted-foreground italic">{t("detail.noDescription")}</span>
                   )}
                 </p>
               </CardContent>
@@ -297,17 +299,17 @@ export default function PropertyDetail() {
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>التصنيف</CardTitle>
+                <CardTitle>{t("detail.classification")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {[
-                  { label: "النوع", value: (property as any).typeName, icon: Home },
-                  { label: "الفئة", value: property.category },
-                  { label: "التشطيب", value: property.finishing },
-                  { label: "الإطلالة", value: (property as any).view },
-                  { label: "الطابق", value: (property as any).floorText || property.floor },
-                  { label: "نوع الوحدة", value: (property as any).unitType },
-                  { label: "المنطقة الفرعية", value: (property as any).subArea },
+                  { label: t("detail.type"), value: (property as any).typeName, icon: Home },
+                  { label: t("detail.category"), value: property.category },
+                  { label: t("detail.finishing"), value: property.finishing },
+                  { label: t("detail.viewField"), value: (property as any).view },
+                  { label: t("detail.floor"), value: (property as any).floorText || property.floor },
+                  { label: t("detail.unitType"), value: (property as any).unitType },
+                  { label: t("detail.subArea"), value: (property as any).subArea },
                 ].map(({ label, value }) =>
                   value ? (
                     <div key={label} className="flex justify-between items-center text-sm border-b pb-2 last:border-0 last:pb-0">
@@ -317,10 +319,10 @@ export default function PropertyDetail() {
                   ) : null
                 )}
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">تم الإضافة</span>
+                  <span className="text-muted-foreground">{t("detail.added")}</span>
                   <span className="font-medium">
                     {property.createdAt
-                      ? new Date(property.createdAt).toLocaleDateString("ar-EG")
+                       ? new Date(property.createdAt).toLocaleDateString(language === "ar" ? "ar-EG" : "en-US")
                       : "-"}
                   </span>
                 </div>
@@ -331,25 +333,25 @@ export default function PropertyDetail() {
             {((property as any).mapsUrl || (property as any).videoUrl || (property as any).externalUrl) && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-sm">روابط</CardTitle>
+                  <CardTitle className="text-sm">{t("detail.links")}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {(property as any).mapsUrl && (
                     <a href={(property as any).mapsUrl} target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-2 text-sm text-primary hover:underline">
-                      <MapPin size={14} /> عرض على الخريطة
+                       <MapPin size={14} /> {t("detail.map")}
                     </a>
                   )}
                   {(property as any).videoUrl && (
                     <a href={(property as any).videoUrl} target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-2 text-sm text-primary hover:underline">
-                      <ExternalLink size={14} /> مقطع الفيديو
+                       <ExternalLink size={14} /> {t("detail.video")}
                     </a>
                   )}
                   {(property as any).externalUrl && (
                     <a href={(property as any).externalUrl} target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-2 text-sm text-primary hover:underline">
-                      <ExternalLink size={14} /> رابط خارجي
+                       <ExternalLink size={14} /> {t("detail.external")}
                     </a>
                   )}
                 </CardContent>
@@ -361,7 +363,7 @@ export default function PropertyDetail() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-sm">
                   <Activity size={16} />
-                  سجل التعديلات
+                   {t("detail.history")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -372,13 +374,13 @@ export default function PropertyDetail() {
                       <div>
                         <div className="font-medium">{entry.action}</div>
                         <div className="text-xs text-muted-foreground mt-0.5">
-                          {new Date(entry.changedAt).toLocaleString("ar-EG")}
+                           {new Date(entry.changedAt).toLocaleString(language === "ar" ? "ar-EG" : "en-US")}
                         </div>
                       </div>
                     </div>
                   ))}
                   {(!history || history.length === 0) && (
-                    <div className="text-sm text-muted-foreground">لا يوجد سجل تاريخي.</div>
+                     <div className="text-sm text-muted-foreground">{t("detail.noHistory")}</div>
                   )}
                 </div>
               </CardContent>

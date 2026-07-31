@@ -11,28 +11,29 @@ import { Link } from "wouter";
 import { ArrowRight, GitCompare, Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCurrency } from "@/hooks/use-currency";
+import { useLanguage, MessageKey } from "@/contexts/LanguageContext";
 
 // ── Field definitions ──────────────────────────────────────────────────────────
 
-const FIELDS: { key: string; label: string }[] = [
-  { key: "code",        label: "الكود" },
-  { key: "title",       label: "العنوان" },
-  { key: "price",       label: "السعر" },
-  { key: "area",        label: "المساحة" },
-  { key: "beds",        label: "غرف النوم" },
-  { key: "baths",       label: "الحمامات" },
-  { key: "category",    label: "الفئة" },
-  { key: "status",      label: "الحالة" },
-  { key: "finishing",   label: "التشطيب" },
-  { key: "view",        label: "الإطلالة" },
-  { key: "regionName",  label: "المنطقة" },
-  { key: "typeName",    label: "نوع العقار" },
-  { key: "subArea",     label: "المنطقة الفرعية" },
-  { key: "floor",       label: "الدور" },
-  { key: "unitType",    label: "نوع الوحدة" },
-  { key: "featured",    label: "مميز" },
-  { key: "description", label: "الوصف" },
-  { key: "createdAt",   label: "تاريخ الإضافة" },
+const FIELDS: { key: string; labelKey: MessageKey }[] = [
+  { key: "code", labelKey: "compare.code" },
+  { key: "title", labelKey: "compare.titleField" },
+  { key: "price", labelKey: "compare.price" },
+  { key: "area", labelKey: "compare.area" },
+  { key: "beds", labelKey: "compare.beds" },
+  { key: "baths", labelKey: "compare.baths" },
+  { key: "category", labelKey: "compare.category" },
+  { key: "status", labelKey: "compare.status" },
+  { key: "finishing", labelKey: "compare.finishing" },
+  { key: "view", labelKey: "compare.view" },
+  { key: "regionName", labelKey: "compare.region" },
+  { key: "typeName", labelKey: "compare.propertyType" },
+  { key: "subArea", labelKey: "compare.subArea" },
+  { key: "floor", labelKey: "compare.floor" },
+  { key: "unitType", labelKey: "compare.unitType" },
+  { key: "featured", labelKey: "compare.featuredField" },
+  { key: "description", labelKey: "compare.description" },
+  { key: "createdAt", labelKey: "compare.createdAt" },
 ];
 
 const CAT_LABEL: Record<string, string> = {
@@ -45,14 +46,18 @@ const STATUS_VARIANT: Record<string, any> = {
   active: "success", draft: "draft", sold: "destructive", rented: "info",
 };
 
-function formatValue(key: string, val: any, currency: string): string {
+function formatValue(key: string, val: any, currency: string, language: "ar" | "en"): string {
   if (val === null || val === undefined || val === "") return "—";
-  if (key === "price") return formatPrice(val, currency) ?? "—";
-  if (key === "area") return formatArea(val) ?? "—";
-  if (key === "category") return CAT_LABEL[val] ?? val;
-  if (key === "status") return STATUS_LABEL[val] ?? val;
-  if (key === "featured") return val ? "نعم ⭐" : "لا";
-  if (key === "createdAt") return new Date(val).toLocaleDateString("ar-EG");
+  if (key === "price") return formatPrice(val, currency, language) ?? "—";
+  if (key === "area") return formatArea(val, language) ?? "—";
+  if (key === "category") return language === "ar"
+    ? CAT_LABEL[val] ?? val
+    : ({ sale: "Sale", rent: "Rent", investment: "Investment" } as Record<string, string>)[val] ?? val;
+  if (key === "status") return language === "ar"
+    ? STATUS_LABEL[val] ?? val
+    : ({ active: "Active", draft: "Draft", sold: "Sold", rented: "Rented" } as Record<string, string>)[val] ?? val;
+  if (key === "featured") return val ? (language === "ar" ? "نعم ⭐" : "Yes ⭐") : (language === "ar" ? "لا" : "No");
+  if (key === "createdAt") return new Date(val).toLocaleDateString(language === "ar" ? "ar-EG" : "en-US");
   return String(val);
 }
 
@@ -83,8 +88,8 @@ function getVal(property: any, key: string): any {
 // ── Property picker ───────────────────────────────────────────────────────────
 
 function PropertyPicker({
-  label, value, onChange,
-}: { label: string; value: string; onChange: (id: string) => void }) {
+  label, value, onChange, language,
+}: { label: string; value: string; onChange: (id: string) => void; language: "ar" | "en" }) {
   const { data } = useListProperties({ limit: 100 }, { query: { queryKey: ["compare-list"] } });
   const properties = data?.data ?? [];
 
@@ -93,7 +98,7 @@ function PropertyPicker({
       <label className="text-xs text-muted-foreground font-medium">{label}</label>
       <Select value={value} onValueChange={onChange}>
         <SelectTrigger className="h-9">
-          <SelectValue placeholder="اختر عقاراً…" />
+           <SelectValue placeholder={language === "ar" ? "اختر عقاراً…" : "Choose a property…"} />
         </SelectTrigger>
         <SelectContent>
           {properties.map((p: any) => (
@@ -111,6 +116,7 @@ function PropertyPicker({
 
 function PropertyColumn({ id }: { id: string }) {
   const currency = useCurrency();
+  const { language, t } = useLanguage();
   const { data: p, isLoading } = useGetProperty(id, { query: { queryKey: ["compare-prop", id] } });
 
   if (isLoading) {
@@ -130,19 +136,21 @@ function PropertyColumn({ id }: { id: string }) {
         <div className="font-bold text-primary">{p?.title || p?.code}</div>
         {p?.status && (
           <Badge variant={STATUS_VARIANT[p.status] ?? "default"} className="mt-1 text-[10px]">
-            {STATUS_LABEL[p.status] ?? p.status}
+            {language === "ar"
+              ? STATUS_LABEL[p.status] ?? p.status
+              : ({ active: "Active", draft: "Draft", sold: "Sold", rented: "Rented" } as Record<string, string>)[p.status] ?? p.status}
           </Badge>
         )}
         <div className="text-2xl font-bold text-foreground mt-2">
-          {formatPrice(p?.price, currency)}
+          {formatPrice(p?.price, currency, language)}
         </div>
         <Button asChild variant="outline" size="sm" className="mt-3 text-xs h-7">
-          <Link href={`/properties/${id}`}>عرض التفاصيل</Link>
+          <Link href={`/properties/${id}`}>{t("compare.viewDetails")}</Link>
         </Button>
       </div>
 
       {/* Rows */}
-      {FIELDS.map(({ key, label }, idx) => {
+      {FIELDS.map(({ key }, idx) => {
         const val = getVal(p, key);
         return (
           <div
@@ -153,7 +161,7 @@ function PropertyColumn({ id }: { id: string }) {
             )}
           >
             <span className={cn("font-medium", !val && val !== 0 ? "text-muted-foreground" : "")}>
-               {formatValue(key, val, currency)}
+               {formatValue(key, val, currency, language)}
             </span>
           </div>
         );
@@ -165,6 +173,7 @@ function PropertyColumn({ id }: { id: string }) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function Compare() {
+  const { t, language } = useLanguage();
   const [idA, setIdA] = useState("");
   const [idB, setIdB] = useState("");
   const [idC, setIdC] = useState("");
@@ -181,22 +190,22 @@ export default function Compare() {
         <div>
           <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <GitCompare size={22} className="text-primary" />
-            مقارنة العقارات
+             {t("compare.title")}
           </h2>
-          <p className="text-muted-foreground text-sm">قارن بين عقارين أو ثلاثة جنباً إلى جنب</p>
+           <p className="text-muted-foreground text-sm">{t("compare.subtitle")}</p>
         </div>
       </div>
 
       {/* Pickers */}
       <Card>
         <CardHeader className="pb-3 border-b">
-          <CardTitle className="text-sm">اختر العقارات</CardTitle>
+           <CardTitle className="text-sm">{t("compare.chooseProperties")}</CardTitle>
         </CardHeader>
         <CardContent className="pt-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <PropertyPicker label="العقار الأول" value={idA} onChange={setIdA} />
-            <PropertyPicker label="العقار الثاني" value={idB} onChange={setIdB} />
-            <PropertyPicker label="العقار الثالث (اختياري)" value={idC} onChange={setIdC} />
+             <PropertyPicker label={t("compare.propertyOne")} value={idA} onChange={setIdA} language={language} />
+             <PropertyPicker label={t("compare.propertyTwo")} value={idB} onChange={setIdB} language={language} />
+             <PropertyPicker label={t("compare.propertyThree")} value={idC} onChange={setIdC} language={language} />
           </div>
         </CardContent>
       </Card>
@@ -215,17 +224,17 @@ export default function Compare() {
             {/* Label column */}
             <div className="border-e">
               <div className="h-[148px] border-b bg-muted/30 px-4 flex items-center">
-                <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">الخاصية</span>
+                <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">{t("compare.property")}</span>
               </div>
-              {FIELDS.map(({ label }, idx) => (
+               {FIELDS.map(({ labelKey }, idx) => (
                 <div
-                  key={label}
+                   key={labelKey}
                   className={cn(
                     "px-4 py-2.5 text-xs font-semibold text-muted-foreground min-h-[40px] flex items-center",
                     idx % 2 === 0 ? "bg-card" : "bg-muted/20"
                   )}
                 >
-                  {label}
+                   {t(labelKey)}
                 </div>
               ))}
             </div>
@@ -241,7 +250,7 @@ export default function Compare() {
       ) : (
         <div className="flex flex-col items-center gap-4 py-24 text-muted-foreground">
           <Building2 size={48} className="opacity-20" />
-          <p>اختر عقاراً على الأقل للبدء بالمقارنة</p>
+           <p>{t("compare.chooseAtLeastOne")}</p>
         </div>
       )}
     </div>

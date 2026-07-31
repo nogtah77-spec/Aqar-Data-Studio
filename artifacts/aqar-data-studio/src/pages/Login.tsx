@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function Login() {
   const { signIn } = useAuth();
+  const { t, language, dir } = useLanguage();
   const [, navigate] = useLocation();
 
   const [email, setEmail] = useState("");
@@ -27,15 +29,15 @@ export default function Login() {
     const { error } = await signIn(email.trim(), password);
 
     if (error) {
-      // Translate common Supabase error messages to Arabic
+      // Translate common Supabase error messages without exposing provider details.
       const msg =
         error.includes("Invalid login credentials")
-          ? "البريد الإلكتروني أو كلمة المرور غير صحيحة"
+          ? t("login.invalidCredentials")
           : error.includes("Email not confirmed")
-          ? "يرجى تأكيد بريدك الإلكتروني أولاً"
+          ? t("login.emailNotConfirmed")
           : error.includes("Too many requests")
-          ? "محاولات كثيرة، يرجى الانتظار قليلاً"
-          : "حدث خطأ، يرجى المحاولة مجدداً";
+          ? t("login.tooManyRequests")
+          : t("login.genericError");
       setError(msg);
       setLoading(false);
     } else {
@@ -45,7 +47,7 @@ export default function Login() {
 
   return (
     <div
-      dir="rtl"
+      dir={dir}
       className="min-h-screen bg-[#F5EFEB] dark:bg-[#1a2332] flex items-center justify-center p-4"
     >
       {/* Background decoration */}
@@ -64,21 +66,21 @@ export default function Login() {
             Aqar Data Studio
           </h1>
           <p className="text-sm text-[#567C8D] dark:text-[#C8D9E6] mt-1">
-            منصة إدارة بيانات العقارات الاحترافية
+             {t("login.tagline")}
           </p>
         </div>
 
         {/* Login card */}
         <div className="bg-white dark:bg-[#1e2d40] rounded-2xl shadow-xl border border-[#C8D9E6]/50 dark:border-[#2F4156] p-8">
           <h2 className="text-lg font-semibold text-foreground mb-6 text-center">
-            تسجيل الدخول
+             {t("login.title")}
           </h2>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email */}
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm font-medium">
-                البريد الإلكتروني
+                 {t("login.email")}
               </Label>
               <div className="relative">
                 <Mail
@@ -102,7 +104,7 @@ export default function Login() {
             {/* Password */}
             <div className="space-y-2">
               <Label htmlFor="password" className="text-sm font-medium">
-                كلمة المرور
+                   {t("login.password")}
               </Label>
               <div className="relative">
                 <Lock
@@ -125,7 +127,7 @@ export default function Login() {
                   onClick={() => setShowPassword((v) => !v)}
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   tabIndex={-1}
-                  aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
+                   aria-label={showPassword ? t("login.hidePassword") : t("login.showPassword")}
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -152,22 +154,17 @@ export default function Login() {
               {loading ? (
                 <>
                   <Loader2 size={16} className="ms-2 animate-spin" />
-                  جارٍ الدخول…
+                   {t("login.loading")}
                 </>
               ) : (
-                "دخول"
+                 t("login.submit")
               )}
             </Button>
           </form>
 
           {/* Help text */}
           <p className="text-xs text-center text-muted-foreground mt-6 leading-relaxed">
-            لإنشاء أول حساب مدير، أضف مستخدماً من{" "}
-            <span className="font-medium text-[#567C8D]">Supabase → Authentication</span>
-            {" "}ثم غيّر دوره إلى{" "}
-            <span className="font-mono bg-muted px-1 rounded">admin</span>
-            {" "}من جدول{" "}
-            <span className="font-mono bg-muted px-1 rounded">user_profiles</span>.
+           {t("login.help")}
           </p>
         </div>
 

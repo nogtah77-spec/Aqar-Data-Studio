@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
 import { useCurrency } from "@/hooks/use-currency";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 // ── Saved filter presets (localStorage) ──────────────────────────────────────
 
@@ -77,7 +78,7 @@ async function runBulk(ids: string[], operation: string, updates?: Record<string
 
 // ── Property card (mobile) ────────────────────────────────────────────────────
 
-function PropertyCard({ p, selected, onSelect, currency }: { p: any; selected: boolean; onSelect: () => void; currency: string }) {
+function PropertyCard({ p, selected, onSelect, currency, language }: { p: any; selected: boolean; onSelect: () => void; currency: string; language: "ar" | "en" }) {
   const [, setLocation] = useLocation();
   return (
     <div
@@ -105,9 +106,9 @@ function PropertyCard({ p, selected, onSelect, currency }: { p: any; selected: b
       </div>
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-        <span className="font-semibold text-foreground">{formatPrice(p.price, currency)}</span>
-        {p.area > 0 && <span>{formatArea(p.area)}</span>}
-        {p.beds > 0 && <span>{p.beds} غرف</span>}
+        <span className="font-semibold text-foreground">{formatPrice(p.price, currency, language)}</span>
+        {p.area > 0 && <span>{formatArea(p.area, language)}</span>}
+        {p.beds > 0 && <span>{p.beds} {language === "ar" ? "غرف" : "beds"}</span>}
         {p.regionName && (
           <span className="flex items-center gap-1"><MapPin size={10} />{p.regionName}</span>
         )}
@@ -124,7 +125,7 @@ function PropertyCard({ p, selected, onSelect, currency }: { p: any; selected: b
           size="sm"
           className="h-7 text-xs px-2"
         >
-          <Link href={`/properties/${p.id}`}>عرض</Link>
+          <Link href={`/properties/${p.id}`}>{language === "ar" ? "عرض" : "View"}</Link>
         </Button>
       </div>
     </div>
@@ -135,6 +136,7 @@ function PropertyCard({ p, selected, onSelect, currency }: { p: any; selected: b
 
 export default function PropertiesList() {
   const currency = useCurrency();
+  const { t, language } = useLanguage();
   const { toast } = useToast();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -248,15 +250,17 @@ export default function PropertiesList() {
   const handleBulk = async (operation: string) => {
     const ids = Array.from(selected);
     if (!ids.length) return;
-    if (operation === "delete" && !confirm(`حذف ${ids.length} عقار؟ لا يمكن التراجع.`)) return;
+    if (operation === "delete" && !confirm(language === "ar"
+      ? `حذف ${ids.length} عقار؟ لا يمكن التراجع.`
+      : `Delete ${ids.length} properties? This cannot be undone.`)) return;
     setBulkLoading(true);
     try {
       await runBulk(ids, operation);
       setSelected(new Set());
       refetch();
-      toast({ title: "تم تنفيذ العملية الجماعية" });
+      toast({ title: language === "ar" ? "تم تنفيذ العملية الجماعية" : "Bulk operation completed" });
     } catch (error: any) {
-      toast({ title: "تعذر تنفيذ العملية", description: error.message, variant: "destructive" });
+      toast({ title: language === "ar" ? "تعذر تنفيذ العملية" : "Could not complete the operation", description: error.message, variant: "destructive" });
     } finally {
       setBulkLoading(false);
     }
@@ -267,17 +271,19 @@ export default function PropertiesList() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold tracking-tight">العقارات</h2>
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight">{t("properties.title")}</h2>
           <p className="text-muted-foreground text-sm">
-            {data?.total !== undefined ? `${data.total.toLocaleString("ar-EG")} عقار` : "إدارة جميع العقارات"}
+            {data?.total !== undefined
+              ? `${data.total.toLocaleString(language === "ar" ? "ar-EG" : "en-US")} ${t("properties.searchResults")}`
+              : t("properties.manage")}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Button variant="outline" size="sm" className="gap-1.5" asChild>
-            <Link href="/export"><FileDown size={15} /> تصدير</Link>
+            <Link href="/export"><FileDown size={15} /> {t("properties.export")}</Link>
           </Button>
           <Button asChild size="sm" className="gap-1.5">
-            <Link href="/properties/new"><Plus size={15} /> عقار جديد</Link>
+            <Link href="/properties/new"><Plus size={15} /> {t("properties.new")}</Link>
           </Button>
         </div>
       </div>
@@ -287,18 +293,18 @@ export default function PropertiesList() {
         <div className="relative flex-1">
           <Search className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
-            placeholder="بحث بالكود أو العنوان…"
+            placeholder={t("properties.search")}
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             className="ps-9"
-              aria-label="البحث في العقارات"
+              aria-label={t("properties.search")}
           />
             {search && (
               <button
                 type="button"
                 onClick={() => { setSearch(""); setPage(1); }}
                 className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                aria-label="مسح البحث"
+                aria-label={language === "ar" ? "مسح البحث" : "Clear search"}
               >
                 <X size={15} />
               </button>
@@ -312,8 +318,8 @@ export default function PropertiesList() {
               className="h-9 w-9 shrink-0"
               onClick={() => refetch()}
               disabled={isFetching}
-              title="تحديث القائمة"
-              aria-label="تحديث قائمة العقارات"
+              title={t("common.refresh")}
+              aria-label={t("common.refresh")}
             >
               <RefreshCw size={15} className={isFetching ? "animate-spin" : ""} />
             </Button>
@@ -326,7 +332,7 @@ export default function PropertiesList() {
               aria-controls="property-filters"
           >
             <Filter size={15} />
-            <span>فلاتر</span>
+            <span>{t("properties.filters")}</span>
             {activeFilterCount > 0 && (
               <span className="absolute -top-1.5 -end-1.5 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[9px] flex items-center justify-center font-bold">
                 {activeFilterCount}
@@ -339,8 +345,8 @@ export default function PropertiesList() {
             <button
               onClick={() => setView("table")}
               className={cn("px-2.5 py-1.5 transition-colors", view === "table" ? "bg-primary text-primary-foreground" : "hover:bg-muted")}
-              title="جدول"
-              aria-label="عرض جدول"
+               title={t("properties.tableView")}
+               aria-label={t("properties.tableView")}
               aria-pressed={view === "table"}
             >
               <LayoutList size={15} />
@@ -348,8 +354,8 @@ export default function PropertiesList() {
             <button
               onClick={() => setView("cards")}
               className={cn("px-2.5 py-1.5 transition-colors", view === "cards" ? "bg-primary text-primary-foreground" : "hover:bg-muted")}
-              title="بطاقات"
-              aria-label="عرض بطاقات"
+               title={t("properties.cardView")}
+               aria-label={t("properties.cardView")}
               aria-pressed={view === "cards"}
             >
               <LayoutGrid size={15} />
@@ -510,12 +516,12 @@ export default function PropertiesList() {
       {isError && (
         <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-center">
           <AlertCircle className="mx-auto mb-2 text-destructive" size={28} />
-          <p className="font-medium">تعذر تحميل قائمة العقارات</p>
+            <p className="font-medium">{t("properties.loadError")}</p>
           <p className="mt-1 text-sm text-muted-foreground">
             {error instanceof Error ? error.message : "تحقق من الاتصال ثم حاول مرة أخرى."}
           </p>
           <Button variant="outline" size="sm" className="mt-4 gap-1.5" onClick={() => refetch()}>
-            <RefreshCw size={14} /> إعادة المحاولة
+            <RefreshCw size={14} /> {t("common.retry")}
           </Button>
         </div>
       )}
@@ -560,10 +566,10 @@ export default function PropertiesList() {
                         <TableCell colSpan={9} className="h-40 text-center">
                           <div className="flex flex-col items-center gap-3 text-muted-foreground">
                             <Building2 size={40} className="opacity-20" />
-                            <p>لا توجد عقارات مطابقة</p>
+                   <p>{hasActiveQuery ? t("properties.noMatch") : t("properties.noProperties")}</p>
                             {hasActiveQuery && (
                               <Button variant="outline" size="sm" onClick={clearFilters}>
-                                مسح البحث والفلاتر
+                                 {t("properties.clearSearch")}
                               </Button>
                             )}
                           </div>
@@ -591,8 +597,8 @@ export default function PropertiesList() {
                             </Link>
                           </div>
                         </TableCell>
-                        <TableCell className="font-semibold text-sm">{formatPrice(p.price, currency)}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{formatArea(p.area)}</TableCell>
+                        <TableCell className="font-semibold text-sm">{formatPrice(p.price, currency, language)}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{formatArea(p.area, language)}</TableCell>
                         <TableCell className="hidden lg:table-cell">
                           <div className="text-xs space-y-0.5">
                             {p.regionName && (
@@ -684,10 +690,10 @@ export default function PropertiesList() {
                 <div className="flex flex-col items-center gap-3 text-muted-foreground py-16">
                   <Building2 size={40} className="opacity-20" />
                    <SearchX size={18} className="opacity-50" />
-                   <p>{hasActiveQuery ? "لا توجد عقارات مطابقة للبحث الحالي" : "لا توجد عقارات بعد"}</p>
+                   <p>{hasActiveQuery ? t("properties.noMatch") : t("properties.noProperties")}</p>
                    {hasActiveQuery && (
                      <Button variant="outline" size="sm" onClick={clearFilters}>
-                       مسح البحث والفلاتر
+                        {t("properties.clearSearch")}
                      </Button>
                    )}
                 </div>
@@ -701,7 +707,8 @@ export default function PropertiesList() {
                         p={p}
                         selected={selected.has(p.id)}
                         onSelect={() => toggleSelect(p.id)}
-                        currency={currency}
+                         currency={currency}
+                         language={language}
                       />
                     ))}
                   </div>

@@ -6,9 +6,9 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatPrice(price?: number | null, currencyCode = "EGP") {
+export function formatPrice(price?: number | null, currencyCode = "EGP", language: "ar" | "en" = "ar") {
   if (price == null) return "-";
-  return new Intl.NumberFormat('ar-EG', {
+  return new Intl.NumberFormat(language === "ar" ? "ar-EG" : "en-US", {
     style: 'currency',
     currency: getCurrencyOption(currencyCode).code,
     minimumFractionDigits: 0,
@@ -16,7 +16,7 @@ export function formatPrice(price?: number | null, currencyCode = "EGP") {
   }).format(price);
 }
 
-export function formatArea(area?: number | null) {
+export function formatArea(area?: number | null, language: "ar" | "en" = "ar") {
   if (area == null) return "-";
-  return `${new Intl.NumberFormat('en-US').format(area)} م²`;
+  return `${new Intl.NumberFormat(language === "ar" ? "ar-EG" : "en-US").format(area)} ${language === "ar" ? "م²" : "sqm"}`;
 }

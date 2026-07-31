@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 // ── Column definitions ─────────────────────────────────────────────────────────
 
@@ -45,6 +46,15 @@ const ALL_COLUMNS: { value: string; label: string; defaultOn: boolean }[] = [
 ];
 
 const DEFAULT_COLUMNS = ALL_COLUMNS.filter((c) => c.defaultOn).map((c) => c.value);
+
+const COLUMN_LABELS_EN: Record<string, string> = {
+  code: "Code", title: "Title", price: "Price", area: "Area (sqm)", beds: "Bedrooms",
+  baths: "Bathrooms", finishing: "Finishing", view: "View", category: "Category",
+  status: "Status", featured: "Featured", regionName: "Region", typeName: "Property type",
+  subArea: "Sub-area", unitType: "Unit type", floorText: "Floor (text)", floor: "Floor number",
+  floors: "Number of floors", layout: "Layout", description: "Description",
+  videoUrl: "Video URL", mapsUrl: "Map URL", externalUrl: "External URL", createdAt: "Added on",
+};
 
 // ── Format definitions ─────────────────────────────────────────────────────────
 
@@ -112,6 +122,7 @@ function getFilenameFromResponse(res: Response, fallback: string): string {
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function Export() {
+  const { language } = useLanguage();
   const [format, setFormat]             = useState("excel");
   const [selectedCols, setSelectedCols] = useState<string[]>(DEFAULT_COLUMNS);
   const [sortBy, setSortBy]             = useState("created_at");
@@ -163,8 +174,8 @@ export default function Export() {
           body: JSON.stringify(buildPayload()),
         });
         if (!res.ok) {
-          const err = await res.json().catch(() => ({ error: "فشل التصدير" }));
-          throw new Error(err.error ?? "فشل التصدير");
+          const err = await res.json().catch(() => ({ error: language === "ar" ? "فشل التصدير" : "Export failed" }));
+          throw new Error(err.error ?? (language === "ar" ? "فشل التصدير" : "Export failed"));
         }
         const html = await res.text();
         const win = window.open("", "_blank");
@@ -177,7 +188,9 @@ export default function Export() {
             setTimeout(() => win.print(), 600);
           });
         } else {
-          setError("يرجى السماح بالنوافذ المنبثقة لفتح تقرير PDF");
+          setError(language === "ar"
+            ? "يرجى السماح بالنوافذ المنبثقة لفتح تقرير PDF"
+            : "Allow pop-ups to open the PDF report");
         }
         setSuccess(true);
         setTimeout(() => setSuccess(false), 4000);
@@ -201,8 +214,8 @@ export default function Export() {
       });
 
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "فشل التصدير" }));
-        throw new Error(err.error ?? "فشل التصدير");
+        const err = await res.json().catch(() => ({ error: language === "ar" ? "فشل التصدير" : "Export failed" }));
+        throw new Error(err.error ?? (language === "ar" ? "فشل التصدير" : "Export failed"));
       }
 
       const blob = await res.blob();
@@ -234,8 +247,10 @@ export default function Export() {
     <div className="space-y-5 max-w-5xl mx-auto">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">تصدير البيانات</h2>
-        <p className="text-muted-foreground text-sm">استخراج بيانات العقارات بتنسيقات متعددة</p>
+        <h2 className="text-2xl font-bold tracking-tight">{language === "ar" ? "تصدير البيانات" : "Export data"}</h2>
+        <p className="text-muted-foreground text-sm">
+          {language === "ar" ? "استخراج بيانات العقارات بتنسيقات متعددة" : "Export property data in multiple formats"}
+        </p>
       </div>
 
       {/* Feedback */}
@@ -247,7 +262,9 @@ export default function Export() {
       {success && (
         <div className="bg-green-500/10 border border-green-500/20 text-green-700 p-4 rounded-xl text-sm flex items-center gap-2">
           <CheckCircle2 size={16} />
-          {format === "pdf" ? "تم فتح نافذة الطباعة. استخدم «حفظ كـ PDF» من نافذة الطباعة." : "تم تحميل الملف بنجاح!"}
+          {format === "pdf"
+            ? (language === "ar" ? "تم فتح نافذة الطباعة. استخدم «حفظ كـ PDF» من نافذة الطباعة." : "Print window opened. Use “Save as PDF” from the print dialog.")
+            : (language === "ar" ? "تم تحميل الملف بنجاح!" : "File downloaded successfully!")}
         </div>
       )}
 
@@ -258,7 +275,7 @@ export default function Export() {
           <Card>
             <CardHeader className="pb-3 border-b border-border/50">
               <CardTitle className="text-sm flex items-center gap-2">
-                <File size={16} className="text-primary" /> تنسيق الملف
+                <File size={16} className="text-primary" /> {language === "ar" ? "تنسيق الملف" : "File format"}
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-4 space-y-2">
@@ -280,7 +297,17 @@ export default function Export() {
                     </div>
                     <div className="min-w-0">
                       <p className="font-semibold text-sm leading-none">{fmt.label}</p>
-                      <p className="text-[11px] text-muted-foreground mt-1 leading-tight">{fmt.desc}</p>
+                       <p className="text-[11px] text-muted-foreground mt-1 leading-tight">
+                         {language === "ar"
+                           ? fmt.desc
+                           : ({
+                             excel: "Compatible with Microsoft Excel and Google Sheets",
+                             csv: "Comma-separated values for spreadsheet applications",
+                             json: "Structured data for developers and API integrations",
+                             txt: "Raw text separated by tabs for general use",
+                             pdf: "Formatted report for printing or saving as PDF",
+                           } as Record<string, string>)[fmt.value]}
+                       </p>
                     </div>
                   </button>
                 );
@@ -292,23 +319,23 @@ export default function Export() {
           <Card>
             <CardHeader className="pb-3 border-b border-border/50">
               <CardTitle className="text-sm flex items-center gap-2">
-                <SlidersHorizontal size={16} className="text-primary" /> الترتيب
+                <SlidersHorizontal size={16} className="text-primary" /> {language === "ar" ? "الترتيب" : "Sorting"}
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-4 space-y-3">
               <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">ترتيب حسب</Label>
+                <Label className="text-xs text-muted-foreground">{language === "ar" ? "ترتيب حسب" : "Sort by"}</Label>
                 <Select value={sortBy} onValueChange={setSortBy}>
                   <SelectTrigger className="h-8 text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="created_at">تاريخ الإضافة</SelectItem>
-                    <SelectItem value="price">السعر</SelectItem>
-                    <SelectItem value="area">المساحة</SelectItem>
-                    <SelectItem value="code">الكود</SelectItem>
-                    <SelectItem value="title">العنوان</SelectItem>
-                    <SelectItem value="status">الحالة</SelectItem>
+                    <SelectItem value="created_at">{language === "ar" ? "تاريخ الإضافة" : "Added on"}</SelectItem>
+                    <SelectItem value="price">{language === "ar" ? "السعر" : "Price"}</SelectItem>
+                    <SelectItem value="area">{language === "ar" ? "المساحة" : "Area"}</SelectItem>
+                    <SelectItem value="code">{language === "ar" ? "الكود" : "Code"}</SelectItem>
+                    <SelectItem value="title">{language === "ar" ? "العنوان" : "Title"}</SelectItem>
+                    <SelectItem value="status">{language === "ar" ? "الحالة" : "Status"}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -320,7 +347,7 @@ export default function Export() {
                     sortDir === "desc" ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-primary/40"
                   )}
                 >
-                  تنازلي ↓
+                  {language === "ar" ? "تنازلي ↓" : "Descending ↓"}
                 </button>
                 <button
                   onClick={() => setSortDir("asc")}
@@ -329,7 +356,7 @@ export default function Export() {
                     sortDir === "asc" ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-primary/40"
                   )}
                 >
-                  تصاعدي ↑
+                  {language === "ar" ? "تصاعدي ↑" : "Ascending ↑"}
                 </button>
               </div>
             </CardContent>
@@ -342,20 +369,22 @@ export default function Export() {
           <Card>
             <CardHeader className="pb-3 border-b border-border/50">
               <CardTitle className="text-sm flex items-center gap-2">
-                <Filter size={16} className="text-primary" /> الفلاتر
-                <span className="text-muted-foreground font-normal text-xs ms-1">(اتركها فارغة لتصدير كل البيانات)</span>
+                <Filter size={16} className="text-primary" /> {language === "ar" ? "الفلاتر" : "Filters"}
+                <span className="text-muted-foreground font-normal text-xs ms-1">
+                  ({language === "ar" ? "اتركها فارغة لتصدير كل البيانات" : "Leave empty to export all data"})
+                </span>
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">المنطقة</Label>
+                  <Label className="text-xs text-muted-foreground">{language === "ar" ? "المنطقة" : "Region"}</Label>
                   <Select value={filterRegion} onValueChange={setFilterRegion}>
                     <SelectTrigger className="h-8 text-sm">
-                      <SelectValue placeholder="كل المناطق" />
+                      <SelectValue placeholder={language === "ar" ? "كل المناطق" : "All regions"} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__all">كل المناطق</SelectItem>
+                      <SelectItem value="__all">{language === "ar" ? "كل المناطق" : "All regions"}</SelectItem>
                       {regions.map((r: any) => (
                         <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
                       ))}
@@ -364,13 +393,13 @@ export default function Export() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">نوع العقار</Label>
+                  <Label className="text-xs text-muted-foreground">{language === "ar" ? "نوع العقار" : "Property type"}</Label>
                   <Select value={filterType} onValueChange={setFilterType}>
                     <SelectTrigger className="h-8 text-sm">
-                      <SelectValue placeholder="كل الأنواع" />
+                      <SelectValue placeholder={language === "ar" ? "كل الأنواع" : "All types"} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__all">كل الأنواع</SelectItem>
+                      <SelectItem value="__all">{language === "ar" ? "كل الأنواع" : "All types"}</SelectItem>
                       {types.map((t: any) => (
                         <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
                       ))}
@@ -379,32 +408,32 @@ export default function Export() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">الفئة</Label>
+                  <Label className="text-xs text-muted-foreground">{language === "ar" ? "الفئة" : "Category"}</Label>
                   <Select value={filterCategory} onValueChange={setFilterCategory}>
                     <SelectTrigger className="h-8 text-sm">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__all">كل الفئات</SelectItem>
-                      <SelectItem value="sale">للبيع</SelectItem>
-                      <SelectItem value="rent">للإيجار</SelectItem>
-                      <SelectItem value="investment">استثمار</SelectItem>
+                      <SelectItem value="__all">{language === "ar" ? "كل الفئات" : "All categories"}</SelectItem>
+                      <SelectItem value="sale">{language === "ar" ? "للبيع" : "For sale"}</SelectItem>
+                      <SelectItem value="rent">{language === "ar" ? "للإيجار" : "For rent"}</SelectItem>
+                      <SelectItem value="investment">{language === "ar" ? "استثمار" : "Investment"}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">الحالة</Label>
+                  <Label className="text-xs text-muted-foreground">{language === "ar" ? "الحالة" : "Status"}</Label>
                   <Select value={filterStatus} onValueChange={setFilterStatus}>
                     <SelectTrigger className="h-8 text-sm">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__all">كل الحالات</SelectItem>
-                      <SelectItem value="active">نشط</SelectItem>
-                      <SelectItem value="draft">مسودة</SelectItem>
-                      <SelectItem value="sold">مباع</SelectItem>
-                      <SelectItem value="rented">مؤجر</SelectItem>
+                      <SelectItem value="__all">{language === "ar" ? "كل الحالات" : "All statuses"}</SelectItem>
+                      <SelectItem value="active">{language === "ar" ? "نشط" : "Active"}</SelectItem>
+                      <SelectItem value="draft">{language === "ar" ? "مسودة" : "Draft"}</SelectItem>
+                      <SelectItem value="sold">{language === "ar" ? "مباع" : "Sold"}</SelectItem>
+                      <SelectItem value="rented">{language === "ar" ? "مؤجر" : "Rented"}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -417,20 +446,20 @@ export default function Export() {
             <CardHeader className="pb-3 border-b border-border/50">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <CardTitle className="text-sm flex items-center gap-2">
-                  <Columns size={16} className="text-primary" /> الأعمدة المُصدَّرة
+                  <Columns size={16} className="text-primary" /> {language === "ar" ? "الأعمدة المُصدَّرة" : "Exported columns"}
                   <Badge variant="outline" className="text-xs">
                     {selectedCols.length} / {ALL_COLUMNS.length}
                   </Badge>
                 </CardTitle>
                 <div className="flex gap-1.5">
                   <Button variant="ghost" size="sm" className="h-7 text-xs px-2" onClick={selectDefault}>
-                    الافتراضي
+                    {language === "ar" ? "الافتراضي" : "Default"}
                   </Button>
                   <Button variant="ghost" size="sm" className="h-7 text-xs px-2" onClick={selectAll}>
-                    الكل
+                    {language === "ar" ? "الكل" : "All"}
                   </Button>
                   <Button variant="ghost" size="sm" className="h-7 text-xs px-2 text-muted-foreground" onClick={selectNone}>
-                    لا شيء
+                    {language === "ar" ? "لا شيء" : "None"}
                   </Button>
                 </div>
               </div>
@@ -456,7 +485,7 @@ export default function Export() {
                       )}>
                         {checked && <span className="text-[8px] text-primary-foreground font-bold leading-none">✓</span>}
                       </div>
-                      {col.label}
+                      {language === "ar" ? col.label : COLUMN_LABELS_EN[col.value] ?? col.label}
                     </button>
                   );
                 })}
@@ -470,17 +499,21 @@ export default function Export() {
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 rounded-2xl border bg-card">
         <div className="text-sm text-center sm:text-start">
           <p className="font-semibold text-foreground">
-            {format === "pdf" ? "جاهز للطباعة / PDF" : "جاهز للتصدير"}
+            {format === "pdf"
+              ? (language === "ar" ? "جاهز للطباعة / PDF" : "Ready to print / PDF")
+              : (language === "ar" ? "جاهز للتصدير" : "Ready to export")}
           </p>
           <p className="text-muted-foreground text-xs mt-0.5">
-            {selectedCols.length} عمود · تنسيق {selectedFmt.label}
+            {selectedCols.length} {language === "ar" ? "عمود" : "columns"} · {language === "ar" ? "تنسيق" : "Format"} {selectedFmt.label}
             {filterRegion !== "__all" || filterType !== "__all" || filterCategory !== "__all" || filterStatus !== "__all"
-              ? " · مع فلاتر مفعلة"
-              : " · كل البيانات"}
+              ? (language === "ar" ? " · مع فلاتر مفعلة" : " · filters applied")
+              : (language === "ar" ? " · كل البيانات" : " · all data")}
           </p>
           {format === "pdf" && (
             <p className="text-[11px] text-muted-foreground mt-1">
-              سيفتح تقرير في نافذة جديدة → استخدم «حفظ كـ PDF» أو «طباعة»
+              {language === "ar"
+                ? "سيفتح تقرير في نافذة جديدة → استخدم «حفظ كـ PDF» أو «طباعة»"
+                : "A report will open in a new window → use “Save as PDF” or “Print”"}
             </p>
           )}
         </div>
@@ -491,11 +524,11 @@ export default function Export() {
           className="gap-2 w-full sm:w-auto min-w-[180px]"
         >
           {loading ? (
-            <><Loader2 size={18} className="animate-spin" /> جارٍ التجهيز…</>
+            <><Loader2 size={18} className="animate-spin" /> {language === "ar" ? "جارٍ التجهيز…" : "Preparing…"}</>
           ) : format === "pdf" ? (
-            <><Printer size={18} /> فتح للطباعة / PDF</>
+            <><Printer size={18} /> {language === "ar" ? "فتح للطباعة / PDF" : "Open print / PDF"}</>
           ) : (
-            <><Download size={18} /> تصدير {selectedFmt.label}</>
+            <><Download size={18} /> {language === "ar" ? "تصدير" : "Export"} {selectedFmt.label}</>
           )}
         </Button>
       </div>

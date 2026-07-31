@@ -9,23 +9,25 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const navItems = [
-  { href: "/",              label: "الرئيسية",       labelEn: "Dashboard",   icon: LayoutDashboard, roles: ["admin", "agent", "viewer"] },
-  { href: "/properties",    label: "العقارات",        labelEn: "Properties",  icon: Building2, roles: ["admin", "agent", "viewer"] },
-  { href: "/search",        label: "البحث",           labelEn: "Search",      icon: Search, roles: ["admin", "agent", "viewer"] },
-  { href: "/compare",       label: "المقارنة",        labelEn: "Compare",     icon: GitCompare, roles: ["admin", "agent", "viewer"] },
-  { href: "/import",        label: "استيراد",         labelEn: "Import",      icon: Upload, roles: ["admin", "agent"] },
-  { href: "/export",        label: "تصدير",           labelEn: "Export",      icon: Download, roles: ["admin", "agent", "viewer"] },
-  { href: "/regions",       label: "المناطق",         labelEn: "Regions",     icon: MapPin, roles: ["admin", "agent"] },
-  { href: "/property-types",label: "أنواع العقارات",  labelEn: "Types",       icon: Home, roles: ["admin", "agent"] },
-  { href: "/lookup",        label: "القوائم",         labelEn: "Lookup",      icon: List, roles: ["admin", "agent"] },
-  { href: "/users",         label: "المستخدمين",      labelEn: "Users",       icon: Users, roles: ["admin"] },
-  { href: "/audit-logs",    label: "سجل العمليات",   labelEn: "Audit Logs",  icon: History, roles: ["admin", "agent"] },
-  { href: "/settings",      label: "الإعدادات",       labelEn: "Settings",    icon: Settings, roles: ["admin"] },
+  { href: "/", labelKey: "nav.dashboard", icon: LayoutDashboard, roles: ["admin", "agent", "viewer"] },
+  { href: "/properties", labelKey: "nav.properties", icon: Building2, roles: ["admin", "agent", "viewer"] },
+  { href: "/search", labelKey: "nav.search", icon: Search, roles: ["admin", "agent", "viewer"] },
+  { href: "/compare", labelKey: "nav.compare", icon: GitCompare, roles: ["admin", "agent", "viewer"] },
+  { href: "/import", labelKey: "nav.import", icon: Upload, roles: ["admin", "agent"] },
+  { href: "/export", labelKey: "nav.export", icon: Download, roles: ["admin", "agent", "viewer"] },
+  { href: "/regions", labelKey: "nav.regions", icon: MapPin, roles: ["admin", "agent"] },
+  { href: "/property-types", labelKey: "nav.propertyTypes", icon: Home, roles: ["admin", "agent"] },
+  { href: "/lookup", labelKey: "nav.lookup", icon: List, roles: ["admin", "agent"] },
+  { href: "/users", labelKey: "nav.users", icon: Users, roles: ["admin"] },
+  { href: "/audit-logs", labelKey: "nav.auditLogs", icon: History, roles: ["admin", "agent"] },
+  { href: "/settings", labelKey: "nav.settings", icon: Settings, roles: ["admin"] },
 ];
 
 function NavLink({ item, active, onClick }: { item: typeof navItems[0]; active: boolean; onClick?: () => void }) {
+  const { t } = useLanguage();
   return (
     <Link
       href={item.href}
@@ -41,12 +43,7 @@ function NavLink({ item, active, onClick }: { item: typeof navItems[0]; active: 
         size={18}
         className={cn(active ? "text-primary" : "text-muted-foreground")}
       />
-      <div className="flex flex-col">
-        <span>{item.label}</span>
-        <span className="text-[10px] text-muted-foreground font-normal leading-none mt-0.5">
-          {item.labelEn}
-        </span>
-      </div>
+      <span>{t(item.labelKey as Parameters<typeof t>[0])}</span>
     </Link>
   );
 }
@@ -96,6 +93,7 @@ export function MobileSidebar() {
   const [open, setOpen] = useState(false);
   const [location] = useLocation();
   const { profile } = useAuth();
+  const { dir } = useLanguage();
   const visibleItems = navItems.filter((item) => item.roles.includes(profile?.role ?? "viewer"));
 
   return (
@@ -105,15 +103,15 @@ export function MobileSidebar() {
         size="icon"
         className="md:hidden h-9 w-9"
         onClick={() => setOpen(true)}
-        aria-label="فتح القائمة"
+        aria-label={dir === "rtl" ? "فتح القائمة" : "Open menu"}
       >
         <Menu size={20} />
       </Button>
 
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="right" className="w-72 p-0 bg-sidebar border-sidebar-border" dir="rtl">
+        <SheetContent side={dir === "rtl" ? "right" : "left"} className="w-72 p-0 bg-sidebar border-sidebar-border" dir={dir}>
           <SheetHeader className="p-0">
-            <SheetTitle className="sr-only">القائمة الرئيسية</SheetTitle>
+            <SheetTitle className="sr-only">{dir === "rtl" ? "القائمة الرئيسية" : "Main menu"}</SheetTitle>
           </SheetHeader>
           <BrandHeader />
           <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">

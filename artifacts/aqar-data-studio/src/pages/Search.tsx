@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "wouter";
 import { Search as SearchIcon, ArrowLeft } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
 function useDebounceHook<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
   useEffect(() => {
@@ -14,6 +15,7 @@ function useDebounceHook<T>(value: T, delay: number): T {
 }
 
 export default function Search() {
+  const { language } = useLanguage();
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounceHook(query, 300);
 
@@ -28,7 +30,9 @@ export default function Search() {
         <SearchIcon className="absolute start-4 top-1/2 -translate-y-1/2 text-muted-foreground w-6 h-6" />
         <Input 
           className="h-16 text-xl ps-14 rounded-2xl shadow-sm border-card-border bg-card focus-visible:ring-primary/20"
-          placeholder="ابحث عن عقار، منطقة، عميل، أو رقم مرجعي..."
+           placeholder={language === "ar"
+             ? "ابحث عن عقار، منطقة، عميل، أو رقم مرجعي..."
+             : "Search for a property, region, client, or reference number..."}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           autoFocus
@@ -38,12 +42,16 @@ export default function Search() {
       {debouncedQuery.length > 1 && (
         <div className="space-y-4">
           <div className="text-sm font-medium text-muted-foreground px-2">
-            {isLoading ? "جاري البحث..." : `تم العثور على ${data?.total || 0} نتيجة`}
+             {isLoading
+               ? (language === "ar" ? "جاري البحث..." : "Searching...")
+               : (language === "ar"
+                 ? `تم العثور على ${data?.total || 0} نتيجة`
+                 : `${data?.total || 0} results found`)}
           </div>
 
           {isError ? (
             <div className="py-16 text-center text-muted-foreground">
-              تعذر تنفيذ البحث. حاول مرة أخرى.
+               {language === "ar" ? "تعذر تنفيذ البحث. حاول مرة أخرى." : "Search failed. Please try again."}
             </div>
           ) : data?.results?.length ? (
             <div className="flex flex-col gap-3">
@@ -75,7 +83,7 @@ export default function Search() {
             </div>
           ) : !isLoading ? (
             <div className="py-16 text-center text-muted-foreground">
-              لا توجد نتائج مطابقة للبحث.
+               {language === "ar" ? "لا توجد نتائج مطابقة للبحث." : "No matching results found."}
             </div>
           ) : null}
         </div>
@@ -86,7 +94,7 @@ export default function Search() {
           <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center">
             <SearchIcon className="w-8 h-8 opacity-20" />
           </div>
-          <p>اكتب حرفين على الأقل للبدء في البحث</p>
+           <p>{language === "ar" ? "اكتب حرفين على الأقل للبدء في البحث" : "Type at least two characters to start searching"}</p>
         </div>
       )}
     </div>

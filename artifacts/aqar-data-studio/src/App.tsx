@@ -7,6 +7,7 @@ import { Route, Switch, Router as WouterRouter, Redirect, useLocation } from 'wo
 import { AppLayout } from '@/components/layout/AppLayout';
 import { ThemeProvider } from '@/lib/theme';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { LanguageProvider } from '@/contexts/LanguageContext';
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { Component, ErrorInfo, ReactNode } from 'react';
@@ -145,12 +146,14 @@ function App() {
         <TooltipProvider>
           <AuthProvider>
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-              <Switch>
-                <Route path="/login" component={Login} />
-                <Route>
-                  <ProtectedRouter />
-                </Route>
-              </Switch>
+              <LanguageProvider>
+                <Switch>
+                  <Route path="/login" component={Login} />
+                  <Route>
+                    <ProtectedRouter />
+                  </Route>
+                </Switch>
+              </LanguageProvider>
             </WouterRouter>
             <Toaster />
             <ShortcutsDialog />

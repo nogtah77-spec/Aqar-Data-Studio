@@ -4,11 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { CURRENCIES, DEFAULT_CURRENCY, getCurrencyOption } from "@/lib/currencies";
+import { CURRENCIES, DEFAULT_CURRENCY, getCurrencyLabel, getCurrencyOption } from "@/lib/currencies";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Save, Loader2, Settings as SettingsIcon } from "lucide-react";
 import { useState, useEffect } from "react";
 
 export default function Settings() {
+  const { t, language } = useLanguage();
   const { data: settings, isLoading } = useGetSettings({ query: { queryKey: ['settings'] } });
   const updateMutation = useUpdateSettings();
   const queryClient = useQueryClient();
@@ -37,10 +39,10 @@ export default function Settings() {
     updateMutation.mutate({ data: formData }, {
       onSuccess: (updated) => {
         queryClient.setQueryData(["settings"], updated);
-        toast({ title: "تم حفظ الإعدادات", description: "تم تطبيق التغييرات فورًا." });
+        toast({ title: t("settings.saved"), description: language === "ar" ? "تم تطبيق التغييرات فورًا." : "Changes were applied immediately." });
       },
       onError: (error) => {
-        toast({ title: "تعذر حفظ الإعدادات", description: error.message, variant: "destructive" });
+        toast({ title: t("settings.saveError"), description: error.message, variant: "destructive" });
       },
     });
   };
@@ -59,29 +61,29 @@ export default function Settings() {
           <SettingsIcon size={20} />
         </div>
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">إعدادات المنصة (Settings)</h2>
-          <p className="text-muted-foreground text-sm">إدارة الإعدادات العامة والتفضيلات الأساسية.</p>
+          <h2 className="text-2xl font-bold tracking-tight">{t("settings.title")}</h2>
+          <p className="text-muted-foreground text-sm">{t("settings.subtitle")}</p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>البيانات الأساسية</CardTitle>
-            <CardDescription>هذه البيانات تظهر في التقارير والفواتير.</CardDescription>
+            <CardTitle>{t("settings.companyData")}</CardTitle>
+            <CardDescription>{t("settings.companyDataDescription")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">اسم الشركة</label>
+                <label className="text-sm font-medium text-foreground">{t("settings.companyName")}</label>
                 <Input 
                   value={formData.companyName} 
                   onChange={e => setFormData({...formData, companyName: e.target.value})} 
-                  placeholder="مثال: استوديو بيانات عقار"
+                   placeholder={language === "ar" ? "مثال: استوديو بيانات عقار" : "Example: Aqar Data Studio"}
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">العملة الافتراضية</label>
+                <label className="text-sm font-medium text-foreground">{t("settings.defaultCurrency")}</label>
                  <select
                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   value={formData.currency} 
@@ -89,7 +91,7 @@ export default function Settings() {
                  >
                     {CURRENCIES.map((currency) => (
                      <option key={currency.code} value={currency.code}>
-                        {currency.flag} {currency.label} · {currency.code} ({currency.symbol})
+                         {currency.flag} {getCurrencyLabel(currency.code, language)} · {currency.code} ({currency.symbol})
                      </option>
                    ))}
                  </select>
@@ -97,12 +99,12 @@ export default function Settings() {
                     <span className="text-xl leading-none" aria-hidden="true">
                       {getCurrencyOption(formData.currency).flag}
                     </span>
-                    <span className="font-medium">{getCurrencyOption(formData.currency).label}</span>
+                     <span className="font-medium">{getCurrencyLabel(formData.currency, language)}</span>
                     <span className="text-muted-foreground">
                       {getCurrencyOption(formData.currency).code} · {getCurrencyOption(formData.currency).symbol}
                     </span>
                   </div>
-                 <p className="text-xs text-muted-foreground">تُستخدم العملة المختارة في عرض أسعار العقارات والتقارير.</p>
+                  <p className="text-xs text-muted-foreground">{t("settings.currencyHint")}</p>
               </div>
             </div>
           </CardContent>
@@ -110,23 +112,23 @@ export default function Settings() {
 
         <Card>
           <CardHeader>
-            <CardTitle>التفضيلات الإقليمية</CardTitle>
+            <CardTitle>{t("settings.regionalPreferences")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">اللغة الأساسية</label>
+                 <label className="text-sm font-medium text-foreground">{t("settings.primaryLanguage")}</label>
                 <select 
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   value={formData.language}
                   onChange={e => setFormData({...formData, language: e.target.value})}
                 >
-                  <option value="ar">العربية</option>
-                  <option value="en">English</option>
+                   <option value="ar">العربية</option>
+                   <option value="en">English</option>
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">صيغة التاريخ</label>
+                 <label className="text-sm font-medium text-foreground">{t("settings.dateFormat")}</label>
                 <select 
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   value={formData.dateFormat}
@@ -144,7 +146,7 @@ export default function Settings() {
         <div className="flex justify-end">
           <Button type="submit" disabled={updateMutation.isPending} className="gap-2">
             {updateMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-            حفظ التغييرات
+             {language === "ar" ? "حفظ التغييرات" : "Save changes"}
           </Button>
         </div>
       </form>

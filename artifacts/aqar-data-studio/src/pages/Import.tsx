@@ -20,6 +20,7 @@ import { apiFetch } from "@/lib/api";
 import { formatPrice } from "@/lib/utils";
 import { useCurrency } from "@/hooks/use-currency";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   parseWorkbookBytes,
   parseDelimitedText,
@@ -78,6 +79,35 @@ const PROPERTY_FIELDS = [
   { value: "featured", label: "مميز (true / false)" },
   { value: "agentType", label: "نوع الوسيط" },
 ];
+
+const PROPERTY_FIELDS_EN: Record<string, string> = {
+  _skip: "— Skip this column —",
+  code: "Code *",
+  title: "Title",
+  description: "Description",
+  price: "Price",
+  area: "Area (sqm)",
+  beds: "Bedrooms",
+  baths: "Bathrooms",
+  floors: "Number of floors",
+  floor: "Floor number",
+  finishing: "Finishing",
+  view: "View",
+  category: "Category (sale / rent)",
+  status: "Status",
+  regionId: "Region code (ID)",
+  typeId: "Property type code (ID)",
+  subArea: "Sub-area",
+  unitType: "Unit type",
+  floorText: "Floor (text)",
+  layout: "Layout",
+  location: "Location",
+  source: "Source",
+  videoUrl: "Video URL",
+  mapsUrl: "Map URL",
+  featured: "Featured (true / false)",
+  agentType: "Agent type",
+};
 
 // ── Auto-detect column mapping from Arabic/English header names ────────────────
 
@@ -185,12 +215,19 @@ function getActionColor(action: string) {
   return "bg-muted text-muted-foreground border-border";
 }
 
-function getActionLabel(action: string) {
+function getActionLabel(action: string, language: "ar" | "en") {
   const map: Record<string, string> = {
     inserted: "أُضيف", would_insert: "سيُضاف",
     updated: "حُدِّث", would_update: "سيُحدَّث",
     skipped: "تجاوزه", error: "خطأ",
   };
+  if (language === "en") {
+    return ({
+      inserted: "Added", would_insert: "Will be added",
+      updated: "Updated", would_update: "Will be updated",
+      skipped: "Skipped", error: "Error",
+    } as Record<string, string>)[action] ?? action;
+  }
   return map[action] ?? action;
 }
 
@@ -210,7 +247,19 @@ const STEPS_SMART = [
 ];
 
 function StepIndicator({ current, mode }: { current: Step; mode: ImportMode }) {
-  const steps = mode === "smart" ? STEPS_SMART : STEPS_MANUAL;
+  const { language } = useLanguage();
+  const steps = (mode === "smart" ? STEPS_SMART : STEPS_MANUAL).map((step) => ({
+    ...step,
+    label: language === "ar"
+      ? step.label
+      : ({
+        "رفع الملف": "Upload file",
+        "ربط الأعمدة": "Map columns",
+        "إعدادات الاستيراد": "Import settings",
+        "مراجعة وإعدادات": "Review & settings",
+        "النتائج": "Results",
+      } as Record<string, string>)[step.label] ?? step.label,
+  }));
   const idx = steps.findIndex((s) => s.key === current);
   return (
     <div className="flex items-center gap-1 overflow-x-auto pb-1">
@@ -261,11 +310,17 @@ function downloadTemplate() {
 
 // ── Category / region badge helpers ───────────────────────────────────────────
 
-function categoryLabel(cat?: string) {
+function categoryLabel(cat: string | undefined, language: "ar" | "en") {
   const m: Record<string, string> = {
     sale: "بيع", rent: "إيجار", furnished: "مفروش",
     administrative: "إداري", medical: "طبي", commercial: "تجاري",
   };
+  if (language === "en") {
+    return ({
+      sale: "Sale", rent: "Rent", furnished: "Furnished",
+      administrative: "Administrative", medical: "Medical", commercial: "Commercial",
+    } as Record<string, string>)[cat ?? ""] ?? cat ?? "Sale";
+  }
   return m[cat ?? ""] ?? cat ?? "بيع";
 }
 
@@ -278,6 +333,7 @@ function categoryColor(cat?: string) {
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function Import() {
+  const { language } = useLanguage();
   const queryClient = useQueryClient();
   const currency = useCurrency();
   const { toast } = useToast();
@@ -443,12 +499,14 @@ export default function Import() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">استيراد البيانات</h2>
-          <p className="text-muted-foreground text-sm">رفع ملفات Excel أو CSV لاستيراد العقارات دفعةً واحدة</p>
+          <h2 className="text-2xl font-bold tracking-tight">{language === "ar" ? "استيراد البيانات" : "Import data"}</h2>
+          <p className="text-muted-foreground text-sm">
+            {language === "ar" ? "رفع ملفات Excel أو CSV لاستيراد العقارات دفعةً واحدة" : "Upload Excel or CSV files to import properties in bulk"}
+          </p>
         </div>
         {step !== "upload" && (
           <Button variant="outline" size="sm" onClick={reset} className="gap-2 self-start sm:self-auto">
-            <RotateCcw size={14} /> بداية جديدة
+            <RotateCcw size={14} /> {language === "ar" ? "بداية جديدة" : "Start over"}
           </Button>
         )}
       </div>
@@ -481,9 +539,9 @@ export default function Import() {
               <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-5">
                 <Upload size={30} />
               </div>
-              <h3 className="text-lg font-semibold mb-2">اسحب وأفلت الملف هنا</h3>
+              <h3 className="text-lg font-semibold mb-2">{language === "ar" ? "اسحب وأفلت الملف هنا" : "Drag and drop your file here"}</h3>
               <p className="text-muted-foreground text-sm mb-6 max-w-sm">
-                أو اضغط لاختيار ملف من جهازك
+                {language === "ar" ? "أو اضغط لاختيار ملف من جهازك" : "or click to choose a file from your device"}
               </p>
               <div className="flex flex-wrap justify-center gap-2 mb-6">
                 {[
@@ -497,7 +555,7 @@ export default function Import() {
                 ))}
               </div>
               <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); downloadTemplate(); }} className="gap-2">
-                <FileDown size={14} /> تحميل قالب CSV (مع مثال)
+                <FileDown size={14} /> {language === "ar" ? "تحميل قالب CSV (مع مثال)" : "Download CSV template (with example)"}
               </Button>
             </div>
           </div>
@@ -514,11 +572,11 @@ export default function Import() {
           <div className="bg-primary/5 border border-primary/20 p-4 rounded-xl flex items-start gap-3 text-sm">
             <Sparkles className="shrink-0 mt-0.5 text-primary" size={18} />
             <div>
-              <p className="font-semibold mb-1 text-primary">الوضع الذكي — جديد!</p>
+              <p className="font-semibold mb-1 text-primary">{language === "ar" ? "الوضع الذكي — جديد!" : "Smart mode — New!"}</p>
               <ul className="list-disc list-inside space-y-1 text-xs text-muted-foreground">
-                <li>ملفات Excel متعددة الشيتات: يكشف المنطقة والفئة تلقائياً من اسم كل شيت.</li>
-                <li>الأعمدة العربية (النوع، الكود، التشطيب…) تُعرَّف تلقائياً دون ربط يدوي.</li>
-                <li>إذا لم يعمل الوضع الذكي، يتحول إلى ربط يدوي للأعمدة.</li>
+                <li>{language === "ar" ? "ملفات Excel متعددة الشيتات: يكشف المنطقة والفئة تلقائياً من اسم كل شيت." : "Multi-sheet Excel files: detects region and category from each sheet name."}</li>
+                <li>{language === "ar" ? "الأعمدة العربية (النوع، الكود، التشطيب…) تُعرَّف تلقائياً دون ربط يدوي." : "Arabic columns (type, code, finishing…) are detected without manual mapping."}</li>
+                <li>{language === "ar" ? "إذا لم يعمل الوضع الذكي، يتحول إلى ربط يدوي للأعمدة." : "If smart mode cannot parse the file, it falls back to manual column mapping."}</li>
               </ul>
             </div>
           </div>
@@ -526,10 +584,10 @@ export default function Import() {
           <div className="bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-400 p-4 rounded-xl flex items-start gap-3 text-sm">
             <AlertTriangle className="shrink-0 mt-0.5" size={18} />
             <div>
-              <p className="font-semibold mb-1.5">ملاحظات مهمة:</p>
+              <p className="font-semibold mb-1.5">{language === "ar" ? "ملاحظات مهمة:" : "Important notes:"}</p>
               <ul className="list-disc list-inside space-y-1 text-xs">
-                <li>الحقل الإلزامي الوحيد هو: <strong>الكود</strong> — يجب أن يكون فريداً لكل عقار.</li>
-                <li>ستتمكن من معاينة البيانات قبل الاستيراد الفعلي.</li>
+                <li>{language === "ar" ? <>الحقل الإلزامي الوحيد هو: <strong>الكود</strong> — يجب أن يكون فريداً لكل عقار.</> : <>The only required field is <strong>code</strong> — it must be unique for each property.</>}</li>
+                <li>{language === "ar" ? "ستتمكن من معاينة البيانات قبل الاستيراد الفعلي." : "You can preview the data before importing it."}</li>
               </ul>
             </div>
           </div>
@@ -543,17 +601,17 @@ export default function Import() {
             <CardHeader className="pb-3 border-b border-border/50">
               <CardTitle className="text-base flex items-center gap-2">
                 <Table2 size={18} className="text-primary" />
-                ربط أعمدة الملف بحقول العقار
+                {language === "ar" ? "ربط أعمدة الملف بحقول العقار" : "Map file columns to property fields"}
                 <Badge variant="outline" className="ms-auto text-xs">
-                  {parsed.totalRows.toLocaleString("ar-EG")} صف
+                  {parsed.totalRows.toLocaleString(language === "ar" ? "ar-EG" : "en-US")} {language === "ar" ? "صف" : "rows"}
                 </Badge>
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-4">
               <div className="space-y-2">
                 <div className="grid grid-cols-2 gap-x-4 px-3 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide bg-muted/30 rounded-lg">
-                  <span>عمود الملف</span>
-                  <span>حقل العقار</span>
+                  <span>{language === "ar" ? "عمود الملف" : "File column"}</span>
+                  <span>{language === "ar" ? "حقل العقار" : "Property field"}</span>
                 </div>
                 {parsed.headers.map((header) => (
                   <div key={header} className="grid grid-cols-2 gap-x-4 items-center px-3 py-2 rounded-lg hover:bg-muted/20 transition-colors">
@@ -567,7 +625,9 @@ export default function Import() {
                       </SelectTrigger>
                       <SelectContent>
                         {PROPERTY_FIELDS.map((f) => (
-                          <SelectItem key={f.value} value={f.value} className="text-xs">{f.label}</SelectItem>
+                          <SelectItem key={f.value} value={f.value} className="text-xs">
+                            {language === "ar" ? f.label : PROPERTY_FIELDS_EN[f.value] ?? f.label}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -577,7 +637,7 @@ export default function Import() {
               {!codeIsMapped && (
                 <div className="mt-4 bg-red-500/10 border border-red-500/20 text-red-700 p-3 rounded-lg text-xs flex items-center gap-2">
                   <XCircle size={14} />
-                  يجب ربط عمود "الكود" لإتمام الاستيراد.
+                  {language === "ar" ? 'يجب ربط عمود "الكود" لإتمام الاستيراد.' : 'Map the "Code" column before importing.'}
                 </div>
               )}
             </CardContent>
@@ -587,7 +647,9 @@ export default function Import() {
           {previewRows.length > 0 && (
             <Card>
               <CardHeader className="pb-3 border-b border-border/50">
-                <CardTitle className="text-base">معاينة البيانات (أول {previewRows.length} صفوف)</CardTitle>
+                <CardTitle className="text-base">
+                  {language === "ar" ? `معاينة البيانات (أول ${previewRows.length} صفوف)` : `Data preview (first ${previewRows.length} rows)`}
+                </CardTitle>
               </CardHeader>
               <CardContent className="pt-4 overflow-auto">
                 <div className="min-w-[400px]">
@@ -617,9 +679,9 @@ export default function Import() {
           )}
 
           <div className="flex justify-between gap-3">
-            <Button variant="outline" onClick={reset} className="gap-2"><ChevronLeft size={16} /> رجوع</Button>
+             <Button variant="outline" onClick={reset} className="gap-2"><ChevronLeft size={16} /> {language === "ar" ? "رجوع" : "Back"}</Button>
             <Button onClick={() => setStep("settings")} disabled={!codeIsMapped} className="gap-2">
-              التالي <ChevronRight size={16} />
+               {language === "ar" ? "التالي" : "Next"} <ChevronRight size={16} />
             </Button>
           </div>
         </div>
@@ -635,8 +697,8 @@ export default function Import() {
               <CardHeader className="pb-3 border-b border-border/50">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Sparkles size={18} className="text-primary" />
-                  نتائج التحليل الذكي
-                  <Badge className="ms-auto text-xs">{totalSmartRows.toLocaleString("ar-EG")} عقار</Badge>
+                  {language === "ar" ? "نتائج التحليل الذكي" : "Smart analysis results"}
+                  <Badge className="ms-auto text-xs">{totalSmartRows.toLocaleString(language === "ar" ? "ar-EG" : "en-US")} {language === "ar" ? "عقار" : "properties"}</Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-4 space-y-4">
@@ -645,7 +707,7 @@ export default function Import() {
                   <FileSpreadsheet size={14} />
                   <span className="font-medium text-foreground">{currentFileName}</span>
                   <span>—</span>
-                  <span>{smartSheets.length} شيت</span>
+                   <span>{smartSheets.length} {language === "ar" ? "شيت" : "sheets"}</span>
                 </div>
 
                 {/* Per-sheet breakdown */}
@@ -661,10 +723,10 @@ export default function Import() {
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <span className={cn("px-2 py-0.5 rounded-full border text-[10px] font-medium", categoryColor(s.category))}>
-                          {categoryLabel(s.category)}
+                           {categoryLabel(s.category, language)}
                         </span>
                         <span className="text-xs font-semibold text-muted-foreground">
-                          {s.count.toLocaleString("ar-EG")} عقار
+                           {s.count.toLocaleString(language === "ar" ? "ar-EG" : "en-US")} {language === "ar" ? "عقار" : "properties"}
                         </span>
                       </div>
                     </div>
@@ -676,7 +738,7 @@ export default function Import() {
                   <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-400">
                     <AlertTriangle size={14} className="shrink-0 mt-0.5" />
                     <span>
-                      أعمدة لم تُعرَّف (سيتم تجاهلها):{" "}
+                       {language === "ar" ? "أعمدة لم تُعرَّف (سيتم تجاهلها): " : "Unmapped columns (will be ignored): "}
                       {unmappedHeaders.map((h) => (
                         <Badge key={h} variant="outline" className="me-1 text-[10px]">{h}</Badge>
                       ))}
@@ -686,7 +748,9 @@ export default function Import() {
 
                 {/* Preview first 4 items */}
                 <div>
-                  <p className="text-xs font-semibold text-muted-foreground mb-2">معاينة (أول 4 عقارات):</p>
+                   <p className="text-xs font-semibold text-muted-foreground mb-2">
+                     {language === "ar" ? "معاينة (أول 4 عقارات):" : "Preview (first 4 properties):"}
+                   </p>
                   <div className="grid gap-1.5">
                     {smartItems.slice(0, 4).map((item, i) => (
                       <div key={i} className="flex items-center gap-3 text-xs p-2 rounded-lg bg-muted/10 border border-border/30">
@@ -694,7 +758,7 @@ export default function Import() {
                         <span className="text-muted-foreground truncate flex-1">{item.subArea ?? item.regionName ?? "—"}</span>
                         <span className="text-muted-foreground shrink-0">{item.area ? `${item.area}م²` : "—"}</span>
                         <span className="font-medium shrink-0">
-                          {item.price ? formatPrice(item.price, currency) : "—"}
+                           {item.price ? formatPrice(item.price, currency, language) : "—"}
                         </span>
                       </div>
                     ))}
@@ -707,17 +771,17 @@ export default function Import() {
           {/* Import settings card */}
           <Card>
             <CardHeader className="pb-3 border-b border-border/50">
-              <CardTitle className="text-base">إعدادات الاستيراد</CardTitle>
+              <CardTitle className="text-base">{language === "ar" ? "إعدادات الاستيراد" : "Import settings"}</CardTitle>
             </CardHeader>
             <CardContent className="pt-5 space-y-6">
               {/* Mode */}
               <div>
-                <Label className="text-sm font-semibold mb-3 block">وضع الاستيراد</Label>
+                 <Label className="text-sm font-semibold mb-3 block">{language === "ar" ? "وضع الاستيراد" : "Import mode"}</Label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {[
-                    { value: "merge", label: "دمج", desc: "إضافة جديد + تحديث موجود" },
-                    { value: "insert", label: "إضافة فقط", desc: "تجاهل العقارات الموجودة" },
-                    { value: "update", label: "تحديث فقط", desc: "تحديث الموجود فقط" },
+                     { value: "merge", label: language === "ar" ? "دمج" : "Merge", desc: language === "ar" ? "إضافة جديد + تحديث موجود" : "Add new + update existing" },
+                     { value: "insert", label: language === "ar" ? "إضافة فقط" : "Insert only", desc: language === "ar" ? "تجاهل العقارات الموجودة" : "Ignore existing properties" },
+                     { value: "update", label: language === "ar" ? "تحديث فقط" : "Update only", desc: language === "ar" ? "تحديث الموجود فقط" : "Update existing only" },
                   ].map((opt) => (
                     <button
                       key={opt.value}
@@ -740,10 +804,12 @@ export default function Import() {
               <div className="flex items-start justify-between gap-4 p-4 rounded-xl border bg-muted/20">
                 <div>
                   <Label htmlFor="dry-run" className="font-semibold text-sm cursor-pointer">
-                    تشغيل تجريبي (Dry Run)
+                     {language === "ar" ? "تشغيل تجريبي (Dry Run)" : "Dry run"}
                   </Label>
                   <p className="text-xs text-muted-foreground mt-1">
-                    معاينة ما سيحدث دون تعديل قاعدة البيانات فعلياً — ينصح بتشغيله أولاً
+                     {language === "ar"
+                       ? "معاينة ما سيحدث دون تعديل قاعدة البيانات فعلياً — ينصح بتشغيله أولاً"
+                       : "Preview changes without modifying the database — recommended before importing"}
                   </p>
                 </div>
                 <Switch id="dry-run" checked={dryRun} onCheckedChange={setDryRun} />
@@ -754,13 +820,17 @@ export default function Import() {
                 <Info size={16} className="text-secondary shrink-0 mt-0.5" />
                 <div className="text-secondary-foreground/80">
                   <span className="font-semibold">
-                    {(importMode === "smart" ? totalSmartRows : parsed?.totalRows ?? 0).toLocaleString("ar-EG")} صف
+                    {(importMode === "smart" ? totalSmartRows : parsed?.totalRows ?? 0).toLocaleString(language === "ar" ? "ar-EG" : "en-US")} {language === "ar" ? "صف" : "rows"}
                   </span>{" "}
-                  من <span className="font-semibold">{currentFileName || parsed?.fileName}</span> جاهزة بوضع{" "}
+                   {language === "ar" ? "من" : "from"} <span className="font-semibold">{currentFileName || parsed?.fileName}</span> {language === "ar" ? "جاهزة بوضع" : "ready in"}{" "}
                   <span className="font-semibold">
-                    {mode === "merge" ? "الدمج" : mode === "insert" ? "الإضافة" : "التحديث"}
+                     {mode === "merge"
+                       ? (language === "ar" ? "الدمج" : "merge")
+                       : mode === "insert"
+                         ? (language === "ar" ? "الإضافة" : "insert")
+                         : (language === "ar" ? "التحديث" : "update")}
                   </span>
-                  {dryRun && " — وضع تجريبي فقط"}.
+                   {dryRun && (language === "ar" ? " — وضع تجريبي فقط" : " — dry run only")}.
                 </div>
               </div>
             </CardContent>
@@ -768,13 +838,13 @@ export default function Import() {
 
           <div className="flex justify-between gap-3">
             <Button variant="outline" onClick={() => importMode === "smart" ? reset() : setStep("map")} className="gap-2">
-              <ChevronLeft size={16} /> رجوع
+               <ChevronLeft size={16} /> {language === "ar" ? "رجوع" : "Back"}
             </Button>
             <Button onClick={handleImport} disabled={loading} className="gap-2 min-w-[140px]">
               {loading ? (
-                <><Loader2 size={16} className="animate-spin" /> جارٍ المعالجة…</>
+                 <><Loader2 size={16} className="animate-spin" /> {language === "ar" ? "جارٍ المعالجة…" : "Processing…"}</>
               ) : (
-                <><Upload size={16} /> {dryRun ? "تشغيل تجريبي" : "استيراد الآن"}</>
+                 <><Upload size={16} /> {dryRun ? (language === "ar" ? "تشغيل تجريبي" : "Run preview") : (language === "ar" ? "استيراد الآن" : "Import now")}</>
               )}
             </Button>
           </div>
@@ -786,10 +856,10 @@ export default function Import() {
         <div className="space-y-4">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { label: "أُضيف", value: result.added, color: "text-green-600", bg: "bg-green-500/10" },
-              { label: "حُدِّث", value: result.updated, color: "text-blue-600", bg: "bg-blue-500/10" },
-              { label: "تجاوزه", value: result.skipped, color: "text-yellow-600", bg: "bg-yellow-500/10" },
-              { label: "أخطاء", value: result.errors, color: "text-red-600", bg: "bg-red-500/10" },
+               { label: language === "ar" ? "أُضيف" : "Added", value: result.added, color: "text-green-600", bg: "bg-green-500/10" },
+               { label: language === "ar" ? "حُدِّث" : "Updated", value: result.updated, color: "text-blue-600", bg: "bg-blue-500/10" },
+               { label: language === "ar" ? "تجاوزه" : "Skipped", value: result.skipped, color: "text-yellow-600", bg: "bg-yellow-500/10" },
+               { label: language === "ar" ? "أخطاء" : "Errors", value: result.errors, color: "text-red-600", bg: "bg-red-500/10" },
             ].map((s) => (
               <Card key={s.label} className={cn("border-0", s.bg)}>
                 <CardContent className="p-4 text-center">
@@ -803,21 +873,25 @@ export default function Import() {
           {result.dryRun && (
             <div className="bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-400 p-4 rounded-xl flex items-start gap-3 text-sm">
               <Info size={16} className="shrink-0 mt-0.5" />
-              هذه نتائج تجريبية — لم تُعدَّل قاعدة البيانات. ارجع وأوقف "التشغيل التجريبي" لتنفيذ الاستيراد الفعلي.
+               {language === "ar"
+                 ? 'هذه نتائج تجريبية — لم تُعدَّل قاعدة البيانات. ارجع وأوقف "التشغيل التجريبي" لتنفيذ الاستيراد الفعلي.'
+                 : 'These are preview results — the database was not changed. Go back and turn off "Dry run" to perform the import.'}
             </div>
           )}
 
           {result.errors === 0 && !result.dryRun && (
             <div className="bg-green-500/10 border border-green-500/20 text-green-700 p-4 rounded-xl flex items-center gap-3 text-sm">
               <CheckCircle2 size={18} />
-              تم الاستيراد بنجاح دون أخطاء!
+               {language === "ar" ? "تم الاستيراد بنجاح دون أخطاء!" : "Imported successfully without errors!"}
             </div>
           )}
 
           {result.details.length > 0 && (
             <Card>
               <CardHeader className="pb-3 border-b border-border/50">
-                <CardTitle className="text-base">تفاصيل الاستيراد ({result.details.length} صف)</CardTitle>
+                <CardTitle className="text-base">
+                  {language === "ar" ? `تفاصيل الاستيراد (${result.details.length} صف)` : `Import details (${result.details.length} rows)`}
+                </CardTitle>
               </CardHeader>
               <CardContent className="pt-4 overflow-auto max-h-72">
                 <div className="space-y-1.5 min-w-[300px]">
@@ -825,7 +899,7 @@ export default function Import() {
                     <div key={i} className="flex items-center gap-3 text-xs p-2 rounded-lg hover:bg-muted/20">
                       <span className="font-mono font-semibold text-foreground/80 min-w-[80px] truncate">{d.code}</span>
                       <span className={cn("px-2 py-0.5 rounded-full border text-[10px] font-medium shrink-0", getActionColor(d.action))}>
-                        {getActionLabel(d.action)}
+                         {getActionLabel(d.action, language)}
                       </span>
                       {d.error && <span className="text-red-600 truncate">{d.error}</span>}
                     </div>
@@ -838,11 +912,11 @@ export default function Import() {
           <div className="flex flex-col sm:flex-row gap-3">
             {result.dryRun && (
               <Button onClick={() => setStep("settings")} variant="outline" className="gap-2">
-                <ChevronLeft size={16} /> العودة للإعدادات
+                 <ChevronLeft size={16} /> {language === "ar" ? "العودة للإعدادات" : "Back to settings"}
               </Button>
             )}
             <Button onClick={reset} className="gap-2">
-              <RotateCcw size={16} /> استيراد ملف جديد
+               <RotateCcw size={16} /> {language === "ar" ? "استيراد ملف جديد" : "Import another file"}
             </Button>
           </div>
         </div>

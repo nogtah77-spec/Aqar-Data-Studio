@@ -1,10 +1,12 @@
 import { ReactNode } from "react";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export function AppLayout({ children }: { children: ReactNode }) {
+  const { dir } = useLanguage();
   return (
-    <div dir="rtl" className="min-h-screen bg-background text-foreground flex md:flex-row flex-col">
+    <div dir={dir} className="min-h-screen bg-background text-foreground flex md:flex-row flex-col">
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <Topbar />

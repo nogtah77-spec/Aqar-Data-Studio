@@ -5,8 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { History } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function AuditLogs() {
+  const { t, language } = useLanguage();
   const [page, setPage] = useState(1);
   const limit = 50;
 
@@ -22,8 +24,8 @@ export default function AuditLogs() {
           <History size={20} />
         </div>
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">سجل العمليات (Audit Logs)</h2>
-          <p className="text-muted-foreground text-sm">تتبع كامل التغييرات والنشاطات على مستوى النظام.</p>
+          <h2 className="text-2xl font-bold tracking-tight">{t("audit.title")}</h2>
+          <p className="text-muted-foreground text-sm">{t("audit.subtitle")}</p>
         </div>
       </div>
 
@@ -32,27 +34,27 @@ export default function AuditLogs() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>التاريخ</TableHead>
-                <TableHead>المستخدم</TableHead>
-                <TableHead>العملية</TableHead>
-                <TableHead>النوع</TableHead>
-                <TableHead>المرجع</TableHead>
+                <TableHead>{t("audit.date")}</TableHead>
+                <TableHead>{t("audit.user")}</TableHead>
+                <TableHead>{t("audit.action")}</TableHead>
+                <TableHead>{t("audit.type")}</TableHead>
+                <TableHead>{t("audit.reference")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8">جاري التحميل...</TableCell>
+                  <TableCell colSpan={5} className="text-center py-8">{t("audit.loading")}</TableCell>
                 </TableRow>
               ) : data?.data?.map((log) => (
                 <TableRow key={log.id} className="text-sm">
                   <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
-                    {new Date(log.createdAt).toLocaleString('ar-EG', {
+                    {new Date(log.createdAt).toLocaleString(language === "ar" ? "ar-EG" : "en-US", {
                       year: 'numeric', month: '2-digit', day: '2-digit',
                       hour: '2-digit', minute: '2-digit', second: '2-digit'
                     })}
                   </TableCell>
-                  <TableCell className="font-medium">{log.userName || 'نظام'}</TableCell>
+                  <TableCell className="font-medium">{log.userName || t("dashboard.system")}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className="font-mono text-[10px] uppercase">
                       {log.action}
@@ -67,7 +69,7 @@ export default function AuditLogs() {
               {data?.data?.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                    لا يوجد سجل عمليات.
+                     {t("audit.empty")}
                   </TableCell>
                 </TableRow>
               )}
@@ -83,7 +85,7 @@ export default function AuditLogs() {
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page === 1}
                 >
-                  السابق
+                   {t("common.previous")}
                 </Button>
                 <Button 
                   variant="outline" 
@@ -91,7 +93,7 @@ export default function AuditLogs() {
                   onClick={() => setPage(p => p + 1)}
                   disabled={data.data.length < limit}
                 >
-                  التالي
+                   {t("common.next")}
                 </Button>
               </div>
             </div>

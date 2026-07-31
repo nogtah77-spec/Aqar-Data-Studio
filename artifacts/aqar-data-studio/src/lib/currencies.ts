@@ -72,3 +72,9 @@ export function getCurrencyOption(code?: string | null): CurrencyOption {
   return CURRENCIES.find((currency) => currency.code === code) ??
     CURRENCIES.find((currency) => currency.code === DEFAULT_CURRENCY)!;
 }
+
+export function getCurrencyLabel(code: string | null | undefined, language: "ar" | "en" = "ar") {
+  const currency = getCurrencyOption(code);
+  if (language === "ar") return currency.label;
+  return new Intl.DisplayNames(["en"], { type: "currency" }).of(currency.code) ?? currency.code;
+}

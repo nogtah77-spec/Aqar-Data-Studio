@@ -5,19 +5,21 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Users as UsersIcon, UserPlus, Shield, ShieldAlert, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function Users() {
+  const { t, language } = useLanguage();
   const { data: users, refetch, isLoading } = useListUsers({ query: { queryKey: ['users'] } });
   const deleteMutation = useDeleteUser();
   const { toast } = useToast();
   
   const handleDelete = (id: string) => {
-    if (confirm("هل أنت متأكد من حذف هذا المستخدم؟")) {
+    if (confirm(t("users.deleteConfirm"))) {
       deleteMutation.mutate(
         { id },
         {
-          onSuccess: () => { refetch(); toast({ title: "تم حذف المستخدم" }); },
-          onError: (error) => toast({ title: "تعذر حذف المستخدم", description: error.message, variant: "destructive" }),
+           onSuccess: () => { refetch(); toast({ title: t("users.deleteSuccess") }); },
+           onError: (error) => toast({ title: t("users.deleteError"), description: error.message, variant: "destructive" }),
         },
       );
     }
@@ -31,13 +33,13 @@ export default function Users() {
             <UsersIcon size={20} />
           </div>
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">المستخدمين (Users)</h2>
-            <p className="text-muted-foreground text-sm">إدارة وصول الفريق والصلاحيات.</p>
+            <h2 className="text-2xl font-bold tracking-tight">{t("users.title")}</h2>
+            <p className="text-muted-foreground text-sm">{t("users.subtitle")}</p>
           </div>
         </div>
         <Button className="gap-2" disabled>
           <UserPlus size={16} />
-          دعوة مستخدم (قريباً)
+          {t("users.invite")}
         </Button>
       </div>
 
@@ -46,37 +48,37 @@ export default function Users() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>الاسم</TableHead>
-                <TableHead>البريد الإلكتروني</TableHead>
-                <TableHead>الصلاحية</TableHead>
-                <TableHead>تاريخ الانضمام</TableHead>
-                <TableHead>الحالة</TableHead>
+                <TableHead>{t("users.name")}</TableHead>
+                <TableHead>{t("users.email")}</TableHead>
+                <TableHead>{t("users.role")}</TableHead>
+                <TableHead>{t("users.joined")}</TableHead>
+                <TableHead>{t("users.status")}</TableHead>
                 <TableHead className="w-[80px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">جاري التحميل...</TableCell>
+                  <TableCell colSpan={6} className="text-center py-8">{t("common.loading")}</TableCell>
                 </TableRow>
               ) : users?.map((user) => (
                 <TableRow key={user.id}>
-                  <TableCell className="font-medium">{user.name || 'بدون اسم'}</TableCell>
+                <TableCell className="font-medium">{user.name || t("users.noName")}</TableCell>
                   <TableCell className="font-mono text-xs">{user.email}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
                       {user.role === 'admin' ? <ShieldAlert size={14} className="text-destructive" /> : <Shield size={14} className="text-muted-foreground" />}
                       <span className={user.role === 'admin' ? 'font-bold' : ''}>
-                        {user.role === 'admin' ? 'مدير' : user.role === 'agent' ? 'وكيل' : 'مشاهد'}
+                         {t(user.role === "admin" ? "role.admin" : user.role === "agent" ? "role.agent" : "role.viewer")}
                       </span>
                     </div>
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
-                    {new Date(user.createdAt).toLocaleDateString('ar-EG')}
+                     {new Date(user.createdAt).toLocaleDateString(language === "ar" ? "ar-EG" : "en-US")}
                   </TableCell>
                   <TableCell>
                     <Badge variant={user.active ? 'success' : 'outline'}>
-                      {user.active ? 'نشط' : 'معطل'}
+                       {user.active ? t("users.active") : t("users.disabled")}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -95,7 +97,7 @@ export default function Users() {
               {users?.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                    لا يوجد مستخدمين.
+                     {t("users.empty")}
                   </TableCell>
                 </TableRow>
               )}
