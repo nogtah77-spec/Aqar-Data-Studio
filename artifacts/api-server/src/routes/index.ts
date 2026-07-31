@@ -9,17 +9,19 @@ import { usersRouter } from "./users.js";
 import { auditLogsRouter } from "./auditLogs.js";
 import { settingsRouter } from "./settings.js";
 import { searchRouter } from "./search.js";
+import { requireAuth, requireRole } from "../middleware/auth.js";
 
 export const router = Router();
 export default router;
 
 router.use("/", healthRouter);
+router.use(requireAuth);
 router.use("/properties", propertiesRouter);
 router.use("/regions", regionsRouter);
 router.use("/property-types", propertyTypesRouter);
 router.use("/lookup-options", lookupOptionsRouter);
 router.use("/dashboard", dashboardRouter);
-router.use("/users", usersRouter);
-router.use("/audit-logs", auditLogsRouter);
+router.use("/users", requireRole("admin"), usersRouter);
+router.use("/audit-logs", requireRole("admin", "agent"), auditLogsRouter);
 router.use("/settings", settingsRouter);
 router.use("/search", searchRouter);

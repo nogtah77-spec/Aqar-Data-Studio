@@ -21,6 +21,9 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { apiFetch } from "@/lib/api";
+import { useCurrency } from "@/hooks/use-currency";
+import { useToast } from "@/hooks/use-toast";
 
 // ── Saved filter presets (localStorage) ──────────────────────────────────────
 
@@ -62,7 +65,7 @@ const CAT_LABEL: Record<string, string> = {
 // ── Bulk operation ────────────────────────────────────────────────────────────
 
 async function runBulk(ids: string[], operation: string, updates?: Record<string, any>) {
-  const res = await fetch("/api/properties/bulk", {
+  const res = await apiFetch("/api/properties/bulk", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ids, operation, updates }),
@@ -73,7 +76,7 @@ async function runBulk(ids: string[], operation: string, updates?: Record<string
 
 // ── Property card (mobile) ────────────────────────────────────────────────────
 
-function PropertyCard({ p, selected, onSelect }: { p: any; selected: boolean; onSelect: () => void }) {
+function PropertyCard({ p, selected, onSelect, currency }: { p: any; selected: boolean; onSelect: () => void; currency: string }) {
   const [, setLocation] = useLocation();
   return (
     <div
@@ -101,7 +104,7 @@ function PropertyCard({ p, selected, onSelect }: { p: any; selected: boolean; on
       </div>
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-        <span className="font-semibold text-foreground">{formatPrice(p.price)}</span>
+        <span className="font-semibold text-foreground">{formatPrice(p.price, currency)}</span>
         {p.area > 0 && <span>{formatArea(p.area)}</span>}
         {p.beds > 0 && <span>{p.beds} غرف</span>}
         {p.regionName && (
@@ -130,6 +133,8 @@ function PropertyCard({ p, selected, onSelect }: { p: any; selected: boolean; on
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function PropertiesList() {
+  const currency = useCurrency();
+  const { toast } = useToast();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [filterRegion, setFilterRegion] = useState("__all");
@@ -239,7 +244,9 @@ export default function PropertiesList() {
       await runBulk(ids, operation);
       setSelected(new Set());
       refetch();
-    } catch {
+      toast({ title: "تم تنفيذ العملية الجماعية" });
+    } catch (error: any) {
+      toast({ title: "تعذر تنفيذ العملية", description: error.message, variant: "destructive" });
     } finally {
       setBulkLoading(false);
     }
@@ -533,7 +540,7 @@ export default function PropertiesList() {
                             </Link>
                           </div>
                         </TableCell>
-                        <TableCell className="font-semibold text-sm">{formatPrice(p.price)}</TableCell>
+                        <TableCell className="font-semibold text-sm">{formatPrice(p.price, currency)}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">{formatArea(p.area)}</TableCell>
                         <TableCell className="hidden lg:table-cell">
                           <div className="text-xs space-y-0.5">
@@ -637,6 +644,7 @@ export default function PropertiesList() {
                         p={p}
                         selected={selected.has(p.id)}
                         onSelect={() => toggleSelect(p.id)}
+                        currency={currency}
                       />
                     ))}
                   </div>

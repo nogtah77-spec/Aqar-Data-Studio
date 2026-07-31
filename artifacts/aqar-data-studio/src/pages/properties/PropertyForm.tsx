@@ -19,6 +19,9 @@ import {
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { uploadPropertyImage } from "@/lib/supabase";
+import { apiFetch } from "@/lib/api";
+import { useCurrency } from "@/hooks/use-currency";
+import { useToast } from "@/hooks/use-toast";
 
 // ── Smart text parser widget ──────────────────────────────────────────────────
 
@@ -35,7 +38,7 @@ function SmartParser({ onApply }: { onApply: (fields: Record<string, any>) => vo
     setError("");
     setParsed(null);
     try {
-      const res = await fetch("/api/properties/parse-text", {
+      const res = await apiFetch("/api/properties/parse-text", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
@@ -308,6 +311,8 @@ function ImageManager({
 }
 
 export default function PropertyForm() {
+  const currency = useCurrency();
+  const { toast } = useToast();
   const params = useParams();
   const [, setLocation] = useLocation();
   const isEdit = !!params.id && params.id !== "new";
@@ -438,11 +443,19 @@ export default function PropertyForm() {
 
     if (isEdit) {
       updateMutation.mutate({ id: params.id!, data: payload }, {
-        onSuccess: () => setLocation(`/properties/${params.id}`),
+        onSuccess: () => {
+          toast({ title: "تم حفظ تعديلات العقار" });
+          setLocation(`/properties/${params.id}`);
+        },
+        onError: (error) => toast({ title: "تعذر حفظ العقار", description: error.message, variant: "destructive" }),
       });
     } else {
       createMutation.mutate({ data: payload }, {
-        onSuccess: (res: any) => setLocation(`/properties/${res.id}`),
+        onSuccess: (res: any) => {
+          toast({ title: "تمت إضافة العقار" });
+          setLocation(`/properties/${res.id}`);
+        },
+        onError: (error) => toast({ title: "تعذر إضافة العقار", description: error.message, variant: "destructive" }),
       });
     }
   };
@@ -491,7 +504,7 @@ export default function PropertyForm() {
               <Field label="العنوان">
                 <Input placeholder="مثال: شقة للبيع في التجمع الخامس" value={form.title} onChange={set("title")} />
               </Field>
-              <Field label="السعر (ج.م)">
+              <Field label={`السعر (${currency})`}>
                 <Input type="number" placeholder="0" value={form.price} onChange={set("price")} />
               </Field>
               <Field label="المساحة (م²)">

@@ -1,6 +1,7 @@
 import { useGetDashboardStats, useGetDashboardActivity } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
+import { useCurrency } from "@/hooks/use-currency";
 import {
   Building2, TrendingUp, Wallet, CheckCircle2, Clock,
   BarChart3, Star,
@@ -95,6 +96,7 @@ function KPICard({
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
+  const currency = useCurrency();
   const { data: stats, isLoading: statsLoading } = useGetDashboardStats({
     query: { queryKey: ["dashboard-stats"] },
   });
@@ -161,7 +163,7 @@ export default function Dashboard() {
         />
         <KPICard
           label="إجمالي القيمة"
-          value={<span className="text-secondary">{formatPrice(stats?.totalValue)}</span>}
+          value={<span className="text-secondary">{formatPrice(stats?.totalValue, currency)}</span>}
           sub="القيمة التقديرية الإجمالية"
           icon={Wallet}
           iconBg="bg-secondary/10"
@@ -169,7 +171,7 @@ export default function Dashboard() {
         />
         <KPICard
           label="متوسط السعر"
-          value={formatPrice(stats?.avgPrice)}
+          value={formatPrice(stats?.avgPrice, currency)}
           sub={`متوسط المساحة: ${stats?.avgArea ?? 0} م²`}
           icon={TrendingUp}
           iconBg="bg-amber-500/10"

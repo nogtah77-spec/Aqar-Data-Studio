@@ -29,6 +29,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { MapPin, Plus, Trash2, Pencil, Check, X, RefreshCw } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -156,6 +157,7 @@ export default function Regions() {
   const createMutation = useCreateRegion();
   const updateMutation = useUpdateRegion();
   const deleteMutation = useDeleteRegion();
+  const { toast } = useToast();
 
   const [newName, setNewName] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
@@ -167,16 +169,35 @@ export default function Regions() {
     if (!newName.trim()) return;
     createMutation.mutate(
       { data: { id: generateId(newName), name: newName.trim() } },
-      { onSuccess: () => { setNewName(""); refetch(); } }
+      {
+        onSuccess: () => {
+          setNewName("");
+          refetch();
+          toast({ title: "تمت إضافة المنطقة" });
+        },
+        onError: (error) => toast({ title: "تعذر إضافة المنطقة", description: error.message, variant: "destructive" }),
+      }
     );
   };
 
   const handleToggle = (id: string, active: boolean) => {
-    updateMutation.mutate({ id, data: { active } }, { onSuccess: () => refetch() });
+    updateMutation.mutate(
+      { id, data: { active } },
+      {
+        onSuccess: () => { refetch(); toast({ title: "تم تحديث حالة المنطقة" }); },
+        onError: (error) => toast({ title: "تعذر تحديث المنطقة", description: error.message, variant: "destructive" }),
+      },
+    );
   };
 
   const handleRename = (id: string, name: string) => {
-    updateMutation.mutate({ id, data: { name } }, { onSuccess: () => refetch() });
+    updateMutation.mutate(
+      { id, data: { name } },
+      {
+        onSuccess: () => { refetch(); toast({ title: "تم تعديل اسم المنطقة" }); },
+        onError: (error) => toast({ title: "تعذر تعديل المنطقة", description: error.message, variant: "destructive" }),
+      },
+    );
   };
 
   const handleDelete = (region: any) => {
@@ -187,7 +208,14 @@ export default function Regions() {
     if (!deleteTarget) return;
     deleteMutation.mutate(
       { id: deleteTarget.id },
-      { onSuccess: () => { setDeleteTarget(null); refetch(); } }
+      {
+        onSuccess: () => {
+          setDeleteTarget(null);
+          refetch();
+          toast({ title: "تم حذف المنطقة" });
+        },
+        onError: (error) => toast({ title: "تعذر حذف المنطقة", description: error.message, variant: "destructive" }),
+      }
     );
   };
 

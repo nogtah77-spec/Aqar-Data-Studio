@@ -1,8 +1,13 @@
 import { Router } from "express";
 import { supabaseAdmin } from "../lib/supabase.js";
 import { logAudit, generateId } from "../lib/audit.js";
+import { requireRole } from "../middleware/auth.js";
 
 export const regionsRouter = Router();
+
+regionsRouter.post("/", requireRole("admin", "agent"));
+regionsRouter.patch("/:id", requireRole("admin", "agent"));
+regionsRouter.delete("/:id", requireRole("admin", "agent"));
 
 regionsRouter.get("/", async (req, res) => {
   try {

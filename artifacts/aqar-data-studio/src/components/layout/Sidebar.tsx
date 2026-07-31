@@ -8,20 +8,21 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navItems = [
-  { href: "/",              label: "الرئيسية",       labelEn: "Dashboard",   icon: LayoutDashboard },
-  { href: "/properties",    label: "العقارات",        labelEn: "Properties",  icon: Building2 },
-  { href: "/search",        label: "البحث",           labelEn: "Search",      icon: Search },
-  { href: "/compare",       label: "المقارنة",        labelEn: "Compare",     icon: GitCompare },
-  { href: "/import",        label: "استيراد",         labelEn: "Import",      icon: Upload },
-  { href: "/export",        label: "تصدير",           labelEn: "Export",      icon: Download },
-  { href: "/regions",       label: "المناطق",         labelEn: "Regions",     icon: MapPin },
-  { href: "/property-types",label: "أنواع العقارات",  labelEn: "Types",       icon: Home },
-  { href: "/lookup",        label: "القوائم",         labelEn: "Lookup",      icon: List },
-  { href: "/users",         label: "المستخدمين",      labelEn: "Users",       icon: Users },
-  { href: "/audit-logs",    label: "سجل العمليات",   labelEn: "Audit Logs",  icon: History },
-  { href: "/settings",      label: "الإعدادات",       labelEn: "Settings",    icon: Settings },
+  { href: "/",              label: "الرئيسية",       labelEn: "Dashboard",   icon: LayoutDashboard, roles: ["admin", "agent", "viewer"] },
+  { href: "/properties",    label: "العقارات",        labelEn: "Properties",  icon: Building2, roles: ["admin", "agent", "viewer"] },
+  { href: "/search",        label: "البحث",           labelEn: "Search",      icon: Search, roles: ["admin", "agent", "viewer"] },
+  { href: "/compare",       label: "المقارنة",        labelEn: "Compare",     icon: GitCompare, roles: ["admin", "agent", "viewer"] },
+  { href: "/import",        label: "استيراد",         labelEn: "Import",      icon: Upload, roles: ["admin", "agent"] },
+  { href: "/export",        label: "تصدير",           labelEn: "Export",      icon: Download, roles: ["admin", "agent", "viewer"] },
+  { href: "/regions",       label: "المناطق",         labelEn: "Regions",     icon: MapPin, roles: ["admin", "agent"] },
+  { href: "/property-types",label: "أنواع العقارات",  labelEn: "Types",       icon: Home, roles: ["admin", "agent"] },
+  { href: "/lookup",        label: "القوائم",         labelEn: "Lookup",      icon: List, roles: ["admin", "agent"] },
+  { href: "/users",         label: "المستخدمين",      labelEn: "Users",       icon: Users, roles: ["admin"] },
+  { href: "/audit-logs",    label: "سجل العمليات",   labelEn: "Audit Logs",  icon: History, roles: ["admin", "agent"] },
+  { href: "/settings",      label: "الإعدادات",       labelEn: "Settings",    icon: Settings, roles: ["admin"] },
 ];
 
 function NavLink({ item, active, onClick }: { item: typeof navItems[0]; active: boolean; onClick?: () => void }) {
@@ -67,12 +68,14 @@ function BrandHeader() {
 
 export function Sidebar() {
   const [location] = useLocation();
+  const { profile } = useAuth();
+  const visibleItems = navItems.filter((item) => item.roles.includes(profile?.role ?? "viewer"));
 
   return (
     <aside className="w-64 bg-sidebar border-e border-sidebar-border hidden md:flex flex-col shrink-0 sticky top-0 h-screen overflow-hidden">
       <BrandHeader />
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
-        {navItems.map((item) => {
+        {visibleItems.map((item) => {
           const active =
             location === item.href ||
             (item.href !== "/" && location.startsWith(item.href));
@@ -92,6 +95,8 @@ export function Sidebar() {
 export function MobileSidebar() {
   const [open, setOpen] = useState(false);
   const [location] = useLocation();
+  const { profile } = useAuth();
+  const visibleItems = navItems.filter((item) => item.roles.includes(profile?.role ?? "viewer"));
 
   return (
     <>
@@ -112,7 +117,7 @@ export function MobileSidebar() {
           </SheetHeader>
           <BrandHeader />
           <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
-            {navItems.map((item) => {
+            {visibleItems.map((item) => {
               const active =
                 location === item.href ||
                 (item.href !== "/" && location.startsWith(item.href));

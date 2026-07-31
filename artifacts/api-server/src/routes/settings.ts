@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { supabaseAdmin } from "../lib/supabase.js";
 import { logAudit } from "../lib/audit.js";
+import { requireRole } from "../middleware/auth.js";
 
 export const settingsRouter = Router();
 
@@ -32,7 +33,7 @@ settingsRouter.get("/", async (req, res) => {
   }
 });
 
-settingsRouter.patch("/", async (req, res) => {
+settingsRouter.patch("/", requireRole("admin"), async (req, res) => {
   try {
     const updates: Record<string, any> = {};
     const FIELD_MAP: Record<string, string> = {

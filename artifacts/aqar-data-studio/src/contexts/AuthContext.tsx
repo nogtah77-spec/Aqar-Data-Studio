@@ -7,6 +7,7 @@ import {
 } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
+import { setAuthTokenGetter } from "@workspace/api-client-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -71,6 +72,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
+    setAuthTokenGetter(async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      return session?.access_token ?? null;
+    });
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -95,7 +103,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      setAuthTokenGetter(null);
+    };
   }, []);
 
   const signIn = async (

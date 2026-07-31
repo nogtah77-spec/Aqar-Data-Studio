@@ -41,8 +41,9 @@ export default function Search() {
             {isLoading ? "جاري البحث..." : `تم العثور على ${data?.total || 0} نتيجة`}
           </div>
 
-          <div className="flex flex-col gap-3">
-            {data?.results?.map((result) => (
+          {data?.results?.length ? (
+            <div className="flex flex-col gap-3">
+              {data.results.map((result) => (
               <Link key={`${result.type}-${result.id}`} href={
                 result.type === 'property' ? `/properties/${result.id}` :
                 result.type === 'region' ? `/regions` :
@@ -66,8 +67,13 @@ export default function Search() {
                   </CardContent>
                 </Card>
               </Link>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : !isLoading ? (
+            <div className="py-16 text-center text-muted-foreground">
+              لا توجد نتائج مطابقة للبحث.
+            </div>
+          ) : null}
         </div>
       )}
       

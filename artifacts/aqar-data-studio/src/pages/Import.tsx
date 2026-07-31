@@ -15,6 +15,10 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { apiFetch } from "@/lib/api";
+import { formatPrice } from "@/lib/utils";
+import { useCurrency } from "@/hooks/use-currency";
+import { useToast } from "@/hooks/use-toast";
 import {
   parseWorkbookBytes,
   parseDelimitedText,
@@ -273,6 +277,8 @@ function categoryColor(cat?: string) {
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function Import() {
+  const currency = useCurrency();
+  const { toast } = useToast();
   const [step, setStep] = useState<Step>("upload");
   const [importMode, setImportMode] = useState<ImportMode>("manual");
 
@@ -378,7 +384,7 @@ export default function Import() {
         items = parsed.rows.map((row) => mapRowToImportRow(row, mapping)).filter((i) => i.code);
       }
 
-      const res = await fetch("/api/properties/import", {
+      const res = await apiFetch("/api/properties/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ items, mode, dryRun }),
@@ -392,6 +398,7 @@ export default function Import() {
       const data = await res.json();
       setResult(data);
       setStep("results");
+      toast({ title: dryRun ? "اكتملت معاينة الاستيراد" : "تم استيراد البيانات بنجاح" });
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -677,7 +684,7 @@ export default function Import() {
                         <span className="text-muted-foreground truncate flex-1">{item.subArea ?? item.regionName ?? "—"}</span>
                         <span className="text-muted-foreground shrink-0">{item.area ? `${item.area}م²` : "—"}</span>
                         <span className="font-medium shrink-0">
-                          {item.price ? item.price.toLocaleString("ar-EG") + " ج.م" : "—"}
+                          {item.price ? formatPrice(item.price, currency) : "—"}
                         </span>
                       </div>
                     ))}

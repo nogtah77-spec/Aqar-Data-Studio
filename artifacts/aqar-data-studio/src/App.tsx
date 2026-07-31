@@ -63,6 +63,7 @@ import Users from '@/pages/Users';
 import AuditLogs from '@/pages/AuditLogs';
 import Settings from '@/pages/Settings';
 import Search from '@/pages/Search';
+import { RoleGuard } from '@/components/RoleGuard';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -116,18 +117,18 @@ function AuthenticatedApp() {
       <Switch>
         <Route path="/" component={Dashboard} />
         <Route path="/properties" component={PropertiesList} />
-        <Route path="/properties/new" component={PropertyForm} />
-        <Route path="/properties/:id/edit" component={PropertyForm} />
+        <Route path="/properties/new"><RoleGuard roles={["admin", "agent"]}><PropertyForm /></RoleGuard></Route>
+        <Route path="/properties/:id/edit"><RoleGuard roles={["admin", "agent"]}><PropertyForm /></RoleGuard></Route>
         <Route path="/properties/:id" component={PropertyDetail} />
         <Route path="/compare" component={Compare} />
-        <Route path="/import" component={Import} />
+        <Route path="/import"><RoleGuard roles={["admin", "agent"]}><Import /></RoleGuard></Route>
         <Route path="/export" component={Export} />
-        <Route path="/regions" component={Regions} />
-        <Route path="/property-types" component={PropertyTypes} />
-        <Route path="/lookup" component={Lookup} />
-        <Route path="/users" component={Users} />
-        <Route path="/audit-logs" component={AuditLogs} />
-        <Route path="/settings" component={Settings} />
+        <Route path="/regions"><RoleGuard roles={["admin", "agent"]}><Regions /></RoleGuard></Route>
+        <Route path="/property-types"><RoleGuard roles={["admin", "agent"]}><PropertyTypes /></RoleGuard></Route>
+        <Route path="/lookup"><RoleGuard roles={["admin", "agent"]}><Lookup /></RoleGuard></Route>
+        <Route path="/users"><RoleGuard roles={["admin"]}><Users /></RoleGuard></Route>
+        <Route path="/audit-logs"><RoleGuard roles={["admin", "agent"]}><AuditLogs /></RoleGuard></Route>
+        <Route path="/settings"><RoleGuard roles={["admin"]}><Settings /></RoleGuard></Route>
         <Route path="/search" component={Search} />
         <Route component={NotFound} />
       </Switch>

@@ -71,6 +71,7 @@ function UserMenu() {
 
 export function Topbar() {
   const { theme, toggle } = useTheme();
+  const { isAgent } = useAuth();
 
   const openShortcuts = () => window.dispatchEvent(new CustomEvent("aqar:shortcuts-help"));
 
@@ -136,20 +137,24 @@ export function Topbar() {
         </Tooltip>
 
         {/* New property button */}
-        <Button asChild size="sm" className="gap-1.5 shadow-sm font-semibold hidden xs:flex">
-          <Link href="/properties/new">
-            <Plus size={15} />
-            <span className="hidden sm:inline">عقار جديد</span>
-            <span className="sm:hidden">جديد</span>
-          </Link>
-        </Button>
+        {isAgent && (
+          <Button asChild size="sm" className="gap-1.5 shadow-sm font-semibold hidden xs:flex">
+            <Link href="/properties/new">
+              <Plus size={15} />
+              <span className="hidden sm:inline">عقار جديد</span>
+              <span className="sm:hidden">جديد</span>
+            </Link>
+          </Button>
+        )}
 
         {/* Mobile-only: just the + icon */}
-        <Button asChild size="icon" className="xs:hidden shadow-sm h-8 w-8">
-          <Link href="/properties/new">
-            <Plus size={16} />
-          </Link>
-        </Button>
+        {isAgent && (
+          <Button asChild size="icon" className="xs:hidden shadow-sm h-8 w-8">
+            <Link href="/properties/new">
+              <Plus size={16} />
+            </Link>
+          </Button>
+        )}
 
         {/* User menu */}
         <UserMenu />

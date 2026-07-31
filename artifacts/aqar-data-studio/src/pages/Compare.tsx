@@ -10,6 +10,7 @@ import { formatPrice, formatArea } from "@/lib/utils";
 import { Link } from "wouter";
 import { ArrowRight, GitCompare, Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useCurrency } from "@/hooks/use-currency";
 
 // ── Field definitions ──────────────────────────────────────────────────────────
 
@@ -44,9 +45,9 @@ const STATUS_VARIANT: Record<string, any> = {
   active: "success", draft: "draft", sold: "destructive", rented: "info",
 };
 
-function formatValue(key: string, val: any): string {
+function formatValue(key: string, val: any, currency: string): string {
   if (val === null || val === undefined || val === "") return "—";
-  if (key === "price") return formatPrice(val) ?? "—";
+  if (key === "price") return formatPrice(val, currency) ?? "—";
   if (key === "area") return formatArea(val) ?? "—";
   if (key === "category") return CAT_LABEL[val] ?? val;
   if (key === "status") return STATUS_LABEL[val] ?? val;
@@ -109,6 +110,7 @@ function PropertyPicker({
 // ── Property column ───────────────────────────────────────────────────────────
 
 function PropertyColumn({ id }: { id: string }) {
+  const currency = useCurrency();
   const { data: p, isLoading } = useGetProperty(id, { query: { queryKey: ["compare-prop", id] } });
 
   if (isLoading) {
@@ -132,7 +134,7 @@ function PropertyColumn({ id }: { id: string }) {
           </Badge>
         )}
         <div className="text-2xl font-bold text-foreground mt-2">
-          {formatPrice(p?.price)}
+          {formatPrice(p?.price, currency)}
         </div>
         <Button asChild variant="outline" size="sm" className="mt-3 text-xs h-7">
           <Link href={`/properties/${id}`}>عرض التفاصيل</Link>
@@ -151,7 +153,7 @@ function PropertyColumn({ id }: { id: string }) {
             )}
           >
             <span className={cn("font-medium", !val && val !== 0 ? "text-muted-foreground" : "")}>
-              {formatValue(key, val)}
+               {formatValue(key, val, currency)}
             </span>
           </div>
         );

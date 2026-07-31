@@ -1,8 +1,13 @@
 import { Router } from "express";
 import { supabaseAdmin } from "../lib/supabase.js";
 import { generateId, logAudit } from "../lib/audit.js";
+import { requireRole } from "../middleware/auth.js";
 
 export const lookupOptionsRouter = Router();
+
+lookupOptionsRouter.post("/", requireRole("admin", "agent"));
+lookupOptionsRouter.patch("/:id", requireRole("admin", "agent"));
+lookupOptionsRouter.delete("/:id", requireRole("admin", "agent"));
 
 lookupOptionsRouter.get("/", async (req, res) => {
   try {

@@ -1,8 +1,13 @@
 import { Router } from "express";
 import { supabaseAdmin } from "../lib/supabase.js";
 import { logAudit } from "../lib/audit.js";
+import { requireRole } from "../middleware/auth.js";
 
 export const propertyTypesRouter = Router();
+
+propertyTypesRouter.post("/", requireRole("admin", "agent"));
+propertyTypesRouter.patch("/:id", requireRole("admin", "agent"));
+propertyTypesRouter.delete("/:id", requireRole("admin", "agent"));
 
 propertyTypesRouter.get("/", async (req, res) => {
   try {

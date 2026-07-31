@@ -13,6 +13,7 @@ import {
   Printer,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { apiFetch } from "@/lib/api";
 
 // ── Column definitions ─────────────────────────────────────────────────────────
 
@@ -156,7 +157,7 @@ export default function Export() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch("/api/properties/export", {
+        const res = await apiFetch("/api/properties/export", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(buildPayload()),
@@ -193,7 +194,7 @@ export default function Export() {
     setSuccess(false);
     setError(null);
     try {
-      const res = await fetch("/api/properties/export", {
+      const res = await apiFetch("/api/properties/export", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(buildPayload()),

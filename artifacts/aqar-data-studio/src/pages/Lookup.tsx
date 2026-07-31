@@ -21,6 +21,7 @@ import {
   List, Plus, Trash2, Pencil, Tags, RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 // ── Lookup categories ─────────────────────────────────────────────────────────
 
@@ -189,26 +190,54 @@ export default function Lookup() {
   const createMutation = useCreateLookupOption();
   const deleteMutation = useDeleteLookupOption();
   const updateMutation = useUpdateLookupOption();
+  const { toast } = useToast();
 
   const handleCreate = (data: { category: string; value: string; label: string }) => {
     createMutation.mutate(
       { data: { ...data, active: true, sortOrder: items.length } },
-      { onSuccess: () => { setShowDialog(false); refetch(); } }
+      {
+        onSuccess: () => {
+          setShowDialog(false);
+          refetch();
+          toast({ title: "تمت إضافة الخيار" });
+        },
+        onError: (error) => toast({ title: "تعذر إضافة الخيار", description: error.message, variant: "destructive" }),
+      }
     );
   };
 
   const handleDelete = (id: string) => {
-    deleteMutation.mutate({ id }, { onSuccess: () => refetch() });
+    deleteMutation.mutate(
+      { id },
+      {
+        onSuccess: () => { refetch(); toast({ title: "تم حذف الخيار" }); },
+        onError: (error) => toast({ title: "تعذر حذف الخيار", description: error.message, variant: "destructive" }),
+      },
+    );
   };
 
   const handleToggle = (id: string, active: boolean) => {
-    updateMutation.mutate({ id, data: { active } }, { onSuccess: () => refetch() });
+    updateMutation.mutate(
+      { id, data: { active } },
+      {
+        onSuccess: () => { refetch(); toast({ title: "تم تحديث الخيار" }); },
+        onError: (error) => toast({ title: "تعذر تحديث الخيار", description: error.message, variant: "destructive" }),
+      },
+    );
   };
 
   const handleUpdate = (id: string, data: { value: string; label: string }) => {
     updateMutation.mutate(
       { id, data },
-      { onSuccess: () => { setShowDialog(false); setEditItem(null); refetch(); } }
+      {
+        onSuccess: () => {
+          setShowDialog(false);
+          setEditItem(null);
+          refetch();
+          toast({ title: "تم تعديل الخيار" });
+        },
+        onError: (error) => toast({ title: "تعذر تعديل الخيار", description: error.message, variant: "destructive" }),
+      }
     );
   };
 

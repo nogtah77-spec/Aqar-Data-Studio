@@ -29,6 +29,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Home, Plus, Trash2, Pencil, Check, X, RefreshCw } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -157,6 +158,7 @@ export default function PropertyTypes() {
   const createMutation = useCreatePropertyType();
   const updateMutation = useUpdatePropertyType();
   const deleteMutation = useDeletePropertyType();
+  const { toast } = useToast();
 
   const [newName, setNewName] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
@@ -168,16 +170,35 @@ export default function PropertyTypes() {
     if (!newName.trim()) return;
     createMutation.mutate(
       { data: { id: generateId(newName), name: newName.trim() } },
-      { onSuccess: () => { setNewName(""); refetch(); } }
+      {
+        onSuccess: () => {
+          setNewName("");
+          refetch();
+          toast({ title: "تمت إضافة نوع العقار" });
+        },
+        onError: (error) => toast({ title: "تعذر إضافة النوع", description: error.message, variant: "destructive" }),
+      }
     );
   };
 
   const handleToggle = (id: string, active: boolean) => {
-    updateMutation.mutate({ id, data: { active } }, { onSuccess: () => refetch() });
+    updateMutation.mutate(
+      { id, data: { active } },
+      {
+        onSuccess: () => { refetch(); toast({ title: "تم تحديث حالة النوع" }); },
+        onError: (error) => toast({ title: "تعذر تحديث النوع", description: error.message, variant: "destructive" }),
+      },
+    );
   };
 
   const handleRename = (id: string, name: string) => {
-    updateMutation.mutate({ id, data: { name } }, { onSuccess: () => refetch() });
+    updateMutation.mutate(
+      { id, data: { name } },
+      {
+        onSuccess: () => { refetch(); toast({ title: "تم تعديل نوع العقار" }); },
+        onError: (error) => toast({ title: "تعذر تعديل النوع", description: error.message, variant: "destructive" }),
+      },
+    );
   };
 
   const handleDelete = (type: any) => setDeleteTarget(type);
@@ -186,7 +207,14 @@ export default function PropertyTypes() {
     if (!deleteTarget) return;
     deleteMutation.mutate(
       { id: deleteTarget.id },
-      { onSuccess: () => { setDeleteTarget(null); refetch(); } }
+      {
+        onSuccess: () => {
+          setDeleteTarget(null);
+          refetch();
+          toast({ title: "تم حذف نوع العقار" });
+        },
+        onError: (error) => toast({ title: "تعذر حذف النوع", description: error.message, variant: "destructive" }),
+      }
     );
   };
 

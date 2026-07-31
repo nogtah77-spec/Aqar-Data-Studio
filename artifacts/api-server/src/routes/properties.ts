@@ -4,8 +4,19 @@ import { logAudit, generateId } from "../lib/audit.js";
 import { parsePropertyText } from "../lib/text-parser.js";
 import { importPropertiesEngine } from "../lib/import-engine.js";
 import { exportPropertiesEngine } from "../lib/export-engine.js";
+import { requireRole } from "../middleware/auth.js";
 
 export const propertiesRouter = Router();
+
+// Read endpoints remain available to authenticated viewers. Mutations are
+// restricted to agents and administrators.
+propertiesRouter.post("/", requireRole("admin", "agent"));
+propertiesRouter.post("/import", requireRole("admin", "agent"));
+propertiesRouter.post("/bulk", requireRole("admin", "agent"));
+propertiesRouter.post("/parse-text", requireRole("admin", "agent"));
+propertiesRouter.patch("/:id", requireRole("admin", "agent"));
+propertiesRouter.delete("/:id", requireRole("admin", "agent"));
+propertiesRouter.post("/:id/duplicate", requireRole("admin", "agent"));
 
 // ── LIST ──────────────────────────────────────────────────────────────────
 propertiesRouter.get("/", async (req, res) => {

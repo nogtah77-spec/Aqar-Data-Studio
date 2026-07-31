@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatPrice, formatArea } from "@/lib/utils";
 import { uploadPropertyImage } from "@/lib/supabase";
+import { useCurrency } from "@/hooks/use-currency";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import {
   ArrowRight, Edit, MapPin, Home, Bed, Bath, Frame,
   Activity, ImagePlus, Trash2, Loader2, ExternalLink,
@@ -26,6 +29,9 @@ export default function PropertyDetail() {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const currency = useCurrency();
+  const { isAgent } = useAuth();
+  const { toast } = useToast();
 
   const { data: property, isLoading } = useGetProperty(params.id!, {
     query: { queryKey: ["property", params.id] },
@@ -55,6 +61,7 @@ export default function PropertyDetail() {
           data: { images: [...existingImages, ...uploaded] } as any,
         });
         qc.invalidateQueries({ queryKey: ["property", params.id] });
+        toast({ title: "تم رفع الصور" });
       }
     } catch (err: any) {
       setUploadError(err.message ?? "فشل رفع الصورة");
@@ -68,8 +75,13 @@ export default function PropertyDetail() {
     if (!property) return;
     const imgs: string[] = [...((property as any).images ?? [])];
     imgs.splice(idx, 1);
-    await updateProperty({ id: property.id, data: { images: imgs } as any });
-    qc.invalidateQueries({ queryKey: ["property", params.id] });
+    try {
+      await updateProperty({ id: property.id, data: { images: imgs } as any });
+      qc.invalidateQueries({ queryKey: ["property", params.id] });
+      toast({ title: "تم حذف الصورة" });
+    } catch (err: any) {
+      setUploadError(err.message ?? "فشل حذف الصورة");
+    }
   };
 
   // ── Render ──────────────────────────────────────────────────────────────────
@@ -136,12 +148,12 @@ export default function PropertyDetail() {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button asChild className="gap-2">
+             {isAgent && <Button asChild className="gap-2">
               <Link href={`/properties/${property.id}/edit`}>
                 <Edit size={16} />
                 تعديل
               </Link>
-            </Button>
+             </Button>}
           </div>
         </div>
 
@@ -153,16 +165,18 @@ export default function PropertyDetail() {
                 <CardTitle className="text-base">معرض الصور</CardTitle>
                 <div className="flex items-center gap-2">
                   {uploading && <Loader2 size={15} className="animate-spin text-muted-foreground" />}
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="gap-1.5 text-xs h-7"
-                    onClick={() => fileRef.current?.click()}
-                    disabled={uploading}
-                  >
-                    <ImagePlus size={13} />
-                    {uploading ? "جاري الرفع…" : "رفع صورة"}
-                  </Button>
+                   {isAgent && (
+                     <Button
+                       size="sm"
+                       variant="outline"
+                       className="gap-1.5 text-xs h-7"
+                       onClick={() => fileRef.current?.click()}
+                       disabled={uploading}
+                     >
+                       <ImagePlus size={13} />
+                       {uploading ? "جاري الرفع…" : "رفع صورة"}
+                     </Button>
+                   )}
                   <input
                     ref={fileRef}
                     type="file"
@@ -201,13 +215,15 @@ export default function PropertyDetail() {
                           >
                             <ExternalLink size={14} />
                           </button>
-                          <button
-                            onClick={() => handleDeleteImage(i)}
-                            className="w-8 h-8 rounded-full bg-red-500/70 hover:bg-red-500 flex items-center justify-center text-white transition-colors"
-                            title="حذف"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                           {isAgent && (
+                             <button
+                               onClick={() => handleDeleteImage(i)}
+                               className="w-8 h-8 rounded-full bg-red-500/70 hover:bg-red-500 flex items-center justify-center text-white transition-colors"
+                               title="حذف"
+                             >
+                               <Trash2 size={14} />
+                             </button>
+                           )}
                         </div>
                       </div>
                     ))
@@ -235,7 +251,7 @@ export default function PropertyDetail() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                   <div className="space-y-1">
                     <span className="text-muted-foreground text-xs uppercase tracking-wider font-semibold">السعر</span>
-                    <div className="font-bold text-lg text-primary">{formatPrice(property.price)}</div>
+                     <div className="font-bold text-lg text-primary">{formatPrice(property.price, currency)}</div>
                   </div>
                   <div className="space-y-1">
                     <span className="text-muted-foreground text-xs uppercase tracking-wider font-semibold">المساحة</span>

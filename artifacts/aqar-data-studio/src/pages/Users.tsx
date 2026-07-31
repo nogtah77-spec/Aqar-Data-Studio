@@ -4,14 +4,22 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Users as UsersIcon, UserPlus, Shield, ShieldAlert, Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Users() {
   const { data: users, refetch, isLoading } = useListUsers({ query: { queryKey: ['users'] } });
   const deleteMutation = useDeleteUser();
+  const { toast } = useToast();
   
   const handleDelete = (id: string) => {
     if (confirm("هل أنت متأكد من حذف هذا المستخدم؟")) {
-      deleteMutation.mutate({ id }, { onSuccess: () => refetch() });
+      deleteMutation.mutate(
+        { id },
+        {
+          onSuccess: () => { refetch(); toast({ title: "تم حذف المستخدم" }); },
+          onError: (error) => toast({ title: "تعذر حذف المستخدم", description: error.message, variant: "destructive" }),
+        },
+      );
     }
   };
 

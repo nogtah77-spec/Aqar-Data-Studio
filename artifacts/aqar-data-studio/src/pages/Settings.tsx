@@ -2,16 +2,21 @@ import { useGetSettings, useUpdateSettings } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { ARAB_CURRENCIES, DEFAULT_CURRENCY } from "@/lib/currencies";
 import { Save, Loader2, Settings as SettingsIcon } from "lucide-react";
 import { useState, useEffect } from "react";
 
 export default function Settings() {
   const { data: settings, isLoading } = useGetSettings({ query: { queryKey: ['settings'] } });
   const updateMutation = useUpdateSettings();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const [formData, setFormData] = useState({
     companyName: "",
-    currency: "EGP",
+     currency: DEFAULT_CURRENCY,
     language: "ar",
     dateFormat: "DD/MM/YYYY"
   });
@@ -20,7 +25,7 @@ export default function Settings() {
     if (settings) {
       setFormData({
         companyName: settings.companyName || "",
-        currency: settings.currency || "EGP",
+         currency: settings.currency || DEFAULT_CURRENCY,
         language: settings.language || "ar",
         dateFormat: settings.dateFormat || "DD/MM/YYYY"
       });
@@ -29,7 +34,15 @@ export default function Settings() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateMutation.mutate({ data: formData });
+    updateMutation.mutate({ data: formData }, {
+      onSuccess: (updated) => {
+        queryClient.setQueryData(["settings"], updated);
+        toast({ title: "تم حفظ الإعدادات", description: "تم تطبيق التغييرات فورًا." });
+      },
+      onError: (error) => {
+        toast({ title: "تعذر حفظ الإعدادات", description: error.message, variant: "destructive" });
+      },
+    });
   };
 
   if (isLoading) {
@@ -69,13 +82,18 @@ export default function Settings() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">العملة الافتراضية</label>
-                <Input 
+                 <select
+                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   value={formData.currency} 
-                  onChange={e => setFormData({...formData, currency: e.target.value})} 
-                  placeholder="EGP"
-                  disabled
-                />
-                <p className="text-xs text-muted-foreground">يتم استخدام الجنيه المصري حالياً فقط.</p>
+                   onChange={e => setFormData({...formData, currency: e.target.value})}
+                 >
+                   {ARAB_CURRENCIES.map((currency) => (
+                     <option key={currency.code} value={currency.code}>
+                       {currency.flag} {currency.label} ({currency.code})
+                     </option>
+                   ))}
+                 </select>
+                 <p className="text-xs text-muted-foreground">تُستخدم العملة المختارة في عرض أسعار العقارات والتقارير.</p>
               </div>
             </div>
           </CardContent>
