@@ -11,6 +11,7 @@ import { useCurrency } from "@/hooks/use-currency";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
+import { decodePropertyReference } from "@/lib/property-route";
 import {
   ArrowRight, Edit, MapPin, Home, Bed, Bath, Frame,
   Activity, ImagePlus, Trash2, Loader2, ExternalLink,
@@ -35,7 +36,7 @@ export default function PropertyDetail() {
   const { t, language } = useLanguage();
   const { toast } = useToast();
 
-  const propertyId = typeof params.id === "string" ? params.id.trim() : "";
+  const propertyId = decodePropertyReference(params.id);
   const { data: property, isLoading, isError, error, refetch } = useGetProperty(propertyId, {
     query: { enabled: Boolean(propertyId), queryKey: ["property", propertyId] },
   });
@@ -63,7 +64,7 @@ export default function PropertyDetail() {
           id: property.id,
           data: { images: [...existingImages, ...uploaded] } as any,
         });
-        qc.invalidateQueries({ queryKey: ["property", params.id] });
+        qc.invalidateQueries({ queryKey: ["property", propertyId] });
         toast({ title: language === "ar" ? "تم رفع الصور" : "Photos uploaded" });
       }
     } catch (err: any) {
@@ -80,7 +81,7 @@ export default function PropertyDetail() {
     imgs.splice(idx, 1);
     try {
       await updateProperty({ id: property.id, data: { images: imgs } as any });
-      qc.invalidateQueries({ queryKey: ["property", params.id] });
+      qc.invalidateQueries({ queryKey: ["property", propertyId] });
       toast({ title: language === "ar" ? "تم حذف الصورة" : "Photo deleted" });
     } catch (err: any) {
       setUploadError(err.message ?? (language === "ar" ? "فشل حذف الصورة" : "Could not delete the image"));

@@ -18,6 +18,48 @@ propertiesRouter.patch("/:id", requireRole("admin", "agent"));
 propertiesRouter.delete("/:id", requireRole("admin", "agent"));
 propertiesRouter.post("/:id/duplicate", requireRole("admin", "agent"));
 
+function propertyIdentifier(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+type PropertyRow = {
+  id: string;
+  code: string;
+  [key: string]: any;
+};
+
+type PropertyLookupResult = {
+  data: PropertyRow | null;
+  error: any;
+};
+
+async function findPropertyByIdentifier(
+  identifier: string,
+  selection = "*",
+): Promise<PropertyLookupResult> {
+  const byId = await supabaseAdmin
+    .from("properties")
+    .select(selection)
+    .eq("id", identifier)
+    .maybeSingle();
+  if (byId.error || byId.data) {
+    return {
+      data: byId.data as PropertyRow | null,
+      error: byId.error,
+    };
+  }
+
+  const byCode = await supabaseAdmin
+    .from("properties")
+    .select(selection)
+    .eq("code", identifier)
+    .maybeSingle();
+  return {
+    data: byCode.data as PropertyRow | null,
+    error: byCode.error,
+  };
+}
+
 // ── LIST ──────────────────────────────────────────────────────────────────
 propertiesRouter.get("/", async (req, res) => {
   try {
@@ -185,6 +227,24 @@ propertiesRouter.post("/bulk", async (req, res) => {
   try {
     const { operation, ids, updates } = req.body;
     if (!ids?.length) return void res.status(400).json({ error: "ids array required" });
+    const identifiers = ids
+      .map(propertyIdentifier)
+      .filter(Boolean);
+    if (identifiers.length !== ids.length) {
+      return void res.status(400).json({ error: "ids must contain valid property identifiers" });
+    }
+
+    const matched = await Promise.all(
+      identifiers.map(async (identifier: string) => {
+        const result = await findPropertyByIdentifier(identifier, "id");
+        if (result.error) throw result.error;
+        return result.data;
+      }),
+    );
+    if (matched.some((row) => !row)) {
+      return void res.status(404).json({ error: "One or more properties were not found" });
+    }
+    const propertyIds = matched.map((row) => row!.id);
 
     let affected = 0;
     const errors: string[] = [];
@@ -193,52 +253,52 @@ propertiesRouter.post("/bulk", async (req, res) => {
       const { error, count } = await supabaseAdmin
         .from("properties")
         .delete({ count: "exact" })
-        .in("id", ids);
+        .in("id", propertyIds);
       if (error) throw error;
       affected = count ?? ids.length;
 
-      await logAudit({ action: "bulk_delete", resourceType: "property", meta: { ids }, ...auditActor(req) });
+      await logAudit({ action: "bulk_delete", resourceType: "property", meta: { ids: propertyIds }, ...auditActor(req) });
     } else if (operation === "update") {
       const { error, count } = await supabaseAdmin
         .from("properties")
         .update(toDbRow(updates))
-        .in("id", ids);
+        .in("id", propertyIds);
       if (error) throw error;
       affected = count ?? ids.length;
 
-      await logAudit({ action: "bulk_update", resourceType: "property", meta: { ids, updates }, ...auditActor(req) });
+      await logAudit({ action: "bulk_update", resourceType: "property", meta: { ids: propertyIds, updates }, ...auditActor(req) });
     } else if (operation === "archive") {
       const { error, count } = await supabaseAdmin
         .from("properties")
         .update({ status: "draft" })
-        .in("id", ids);
+        .in("id", propertyIds);
       if (error) throw error;
       affected = count ?? ids.length;
-      await logAudit({ action: "archive", resourceType: "property", meta: { ids }, ...auditActor(req) });
+      await logAudit({ action: "archive", resourceType: "property", meta: { ids: propertyIds }, ...auditActor(req) });
     } else if (operation === "activate") {
       const { error, count } = await supabaseAdmin
         .from("properties")
         .update({ status: "active" })
-        .in("id", ids);
+        .in("id", propertyIds);
       if (error) throw error;
       affected = count ?? ids.length;
-      await logAudit({ action: "activate", resourceType: "property", meta: { ids }, ...auditActor(req) });
+      await logAudit({ action: "activate", resourceType: "property", meta: { ids: propertyIds }, ...auditActor(req) });
     } else if (operation === "feature") {
       const { error, count } = await supabaseAdmin
         .from("properties")
         .update({ featured: true })
-        .in("id", ids);
+        .in("id", propertyIds);
       if (error) throw error;
       affected = count ?? ids.length;
-      await logAudit({ action: "feature", resourceType: "property", meta: { ids }, ...auditActor(req) });
+      await logAudit({ action: "feature", resourceType: "property", meta: { ids: propertyIds }, ...auditActor(req) });
     } else if (operation === "unfeature") {
       const { error, count } = await supabaseAdmin
         .from("properties")
         .update({ featured: false })
-        .in("id", ids);
+        .in("id", propertyIds);
       if (error) throw error;
       affected = count ?? ids.length;
-      await logAudit({ action: "unfeature", resourceType: "property", meta: { ids }, ...auditActor(req) });
+      await logAudit({ action: "unfeature", resourceType: "property", meta: { ids: propertyIds }, ...auditActor(req) });
     } else {
       return void res.status(400).json({ error: `Unknown operation: ${operation}` });
     }
@@ -266,10 +326,16 @@ propertiesRouter.post("/parse-text", async (req, res) => {
 // ── HISTORY ───────────────────────────────────────────────────────────────
 propertiesRouter.get("/:id/history", async (req, res) => {
   try {
+    const identifier = propertyIdentifier(req.params.id);
+    if (!identifier) return void res.status(400).json({ error: "Property identifier is required" });
+    const { data: property, error: propertyError } = await findPropertyByIdentifier(identifier, "id");
+    if (propertyError) throw propertyError;
+    if (!property) return void res.status(404).json({ error: "Property not found" });
+
     const { data, error } = await supabaseAdmin
       .from("property_history")
       .select()
-      .eq("property_id", req.params.id)
+      .eq("property_id", property.id)
       .order("changed_at", { ascending: false });
 
     if (error) throw error;
@@ -292,12 +358,13 @@ propertiesRouter.get("/:id/history", async (req, res) => {
 // ── GET ONE ───────────────────────────────────────────────────────────────
 propertiesRouter.get("/:id", async (req, res) => {
   try {
-    const { data, error } = await supabaseAdmin
-      .from("properties")
-      .select(`*, regions!properties_region_id_fkey(name), property_types!properties_type_id_fkey(name)`)
-      .eq("id", req.params.id)
-      .maybeSingle();
+    const identifier = propertyIdentifier(req.params.id);
+    if (!identifier) return void res.status(400).json({ error: "Property identifier is required" });
 
+    const { data, error } = await findPropertyByIdentifier(
+      identifier,
+      `*, regions!properties_region_id_fkey(name), property_types!properties_type_id_fkey(name)`,
+    );
     if (error) {
       req.log.error({ err: error, propertyId: req.params.id }, "getProperty query error");
       return void res.status(500).json({ error: "Unable to load property details" });
@@ -312,16 +379,17 @@ propertiesRouter.get("/:id", async (req, res) => {
 // ── UPDATE ────────────────────────────────────────────────────────────────
 propertiesRouter.patch("/:id", async (req, res) => {
   try {
-    const { data: before } = await supabaseAdmin
-      .from("properties")
-      .select()
-      .eq("id", req.params.id)
-      .single();
+    const identifier = propertyIdentifier(req.params.id);
+    if (!identifier) return void res.status(400).json({ error: "Property identifier is required" });
+
+    const { data: before, error: beforeError } = await findPropertyByIdentifier(identifier);
+    if (beforeError) throw beforeError;
+    if (!before) return void res.status(404).json({ error: "Property not found" });
 
     const { data, error } = await supabaseAdmin
       .from("properties")
       .update(toDbRow(req.body))
-      .eq("id", req.params.id)
+      .eq("id", before.id)
       .select(`*, regions!properties_region_id_fkey(name), property_types!properties_type_id_fkey(name)`)
       .single();
 
@@ -330,7 +398,7 @@ propertiesRouter.patch("/:id", async (req, res) => {
     // Store history snapshot
     await supabaseAdmin.from("property_history").insert({
       id: generateId(),
-      property_id: req.params.id,
+      property_id: before.id,
       action: "update",
       snapshot: before,
       diff: req.body,
@@ -340,7 +408,7 @@ propertiesRouter.patch("/:id", async (req, res) => {
     await logAudit({
       action: "update",
       resourceType: "property",
-      resourceId: req.params.id,
+      resourceId: before.id,
       resourceLabel: data?.code,
       before,
       after: req.body,
@@ -356,28 +424,29 @@ propertiesRouter.patch("/:id", async (req, res) => {
 // ── DELETE ────────────────────────────────────────────────────────────────
 propertiesRouter.delete("/:id", async (req, res) => {
   try {
-    const { data: before } = await supabaseAdmin
-      .from("properties")
-      .select("code")
-      .eq("id", req.params.id)
-      .single();
+    const identifier = propertyIdentifier(req.params.id);
+    if (!identifier) return void res.status(400).json({ error: "Property identifier is required" });
+
+    const { data: before, error: beforeError } = await findPropertyByIdentifier(identifier, "id,code");
+    if (beforeError) throw beforeError;
+    if (!before) return void res.status(404).json({ error: "Property not found" });
 
     const { error } = await supabaseAdmin
       .from("properties")
       .delete()
-      .eq("id", req.params.id);
+      .eq("id", before.id);
 
     if (error) throw error;
 
     await logAudit({
       action: "delete",
       resourceType: "property",
-      resourceId: req.params.id,
+      resourceId: before.id,
       resourceLabel: before?.code,
       ...auditActor(req),
     });
 
-    res.json({ success: true, id: req.params.id });
+    res.json({ success: true, id: before.id });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -386,11 +455,10 @@ propertiesRouter.delete("/:id", async (req, res) => {
 // ── DUPLICATE ─────────────────────────────────────────────────────────────
 propertiesRouter.post("/:id/duplicate", async (req, res) => {
   try {
-    const { data: original, error: fetchErr } = await supabaseAdmin
-      .from("properties")
-      .select()
-      .eq("id", req.params.id)
-      .single();
+    const identifier = propertyIdentifier(req.params.id);
+    if (!identifier) return void res.status(400).json({ error: "Property identifier is required" });
+
+    const { data: original, error: fetchErr } = await findPropertyByIdentifier(identifier);
 
     if (fetchErr || !original) return void res.status(404).json({ error: "Property not found" });
 

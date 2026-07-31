@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { uploadPropertyImage } from "@/lib/supabase";
 import { apiFetch, readJsonResponse } from "@/lib/api";
 import { useCurrency } from "@/hooks/use-currency";
+import { decodePropertyReference } from "@/lib/property-route";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { formatReceptionPieces } from "@/lib/reception";
@@ -534,10 +535,11 @@ export default function PropertyForm() {
   const { toast } = useToast();
   const params = useParams();
   const [, setLocation] = useLocation();
-  const isEdit = !!params.id && params.id !== "new";
+  const propertyId = decodePropertyReference(params.id);
+  const isEdit = Boolean(propertyId) && propertyId !== "new";
 
-  const { data: property, isLoading: isFetching } = useGetProperty(params.id || "", {
-    query: { enabled: isEdit, queryKey: ["property", params.id] },
+  const { data: property, isLoading: isFetching } = useGetProperty(propertyId, {
+    query: { enabled: isEdit, queryKey: ["property", propertyId] },
   });
 
   const { data: regions = [] }    = useListRegions({ query: { queryKey: ["regions"] } });
@@ -706,10 +708,10 @@ export default function PropertyForm() {
     };
 
     if (isEdit) {
-      updateMutation.mutate({ id: params.id!, data: payload }, {
+      updateMutation.mutate({ id: propertyId, data: payload }, {
         onSuccess: () => {
           toast({ title: "تم حفظ تعديلات العقار" });
-          setLocation(`/properties/${params.id}`);
+          setLocation(`/properties/${encodeURIComponent(propertyId)}`);
         },
         onError: (error) => toast({ title: "تعذر حفظ العقار", description: error.message, variant: "destructive" }),
       });
@@ -735,6 +737,18 @@ export default function PropertyForm() {
     return (
       <div className="flex items-center justify-center h-48 text-muted-foreground">
         <Loader2 className="animate-spin me-2" /> جاري التحميل…
+      </div>
+    );
+  }
+
+  if (isEdit && !isFetching && !property) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 h-48 text-center">
+        <p className="text-destructive font-medium">تعذر تحميل بيانات العقار للتعديل.</p>
+        <p className="text-sm text-muted-foreground">ارجع إلى القائمة وافتح العقار مرة أخرى.</p>
+        <Button asChild variant="outline">
+          <Link href="/properties">العودة إلى العقارات</Link>
+        </Button>
       </div>
     );
   }

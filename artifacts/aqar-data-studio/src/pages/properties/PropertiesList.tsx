@@ -26,6 +26,7 @@ import { apiFetch } from "@/lib/api";
 import { useCurrency } from "@/hooks/use-currency";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { propertyPath, propertyReference } from "@/lib/property-route";
 
 // ── Saved filter presets (localStorage) ──────────────────────────────────────
 
@@ -83,6 +84,7 @@ async function runBulk(ids: string[], operation: string, updates?: Record<string
 
 function PropertyCard({ p, selected, onSelect, currency, language }: { p: any; selected: boolean; onSelect: () => void; currency: string; language: "ar" | "en" }) {
   const [, setLocation] = useLocation();
+  const detailsPath = propertyPath(p);
   return (
     <div
       className={cn(
@@ -103,7 +105,7 @@ function PropertyCard({ p, selected, onSelect, currency, language }: { p: any; s
 
       <div
         className="font-semibold text-sm leading-tight cursor-pointer hover:text-primary transition-colors"
-        onClick={() => setLocation(`/properties/${p.id}`)}
+        onClick={() => detailsPath && setLocation(detailsPath)}
       >
         {p.title || p.code}
       </div>
@@ -128,7 +130,11 @@ function PropertyCard({ p, selected, onSelect, currency, language }: { p: any; s
           size="sm"
           className="h-7 text-xs px-2"
         >
-          <Link href={`/properties/${p.id}`}>{language === "ar" ? "عرض" : "View"}</Link>
+          {detailsPath ? (
+            <Link href={detailsPath}>{language === "ar" ? "عرض" : "View"}</Link>
+          ) : (
+            <span className="text-muted-foreground">{language === "ar" ? "لا يوجد معرّف" : "No identifier"}</span>
+          )}
         </Button>
       </div>
     </div>
@@ -234,6 +240,7 @@ export default function PropertiesList() {
   }, [page, search, filterRegion, filterType, filterCategory, filterStatus]);
 
   const toggleSelect = useCallback((id: string) => {
+    if (!id) return;
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -246,12 +253,12 @@ export default function PropertiesList() {
     if (selected.size === properties.length) {
       setSelected(new Set());
     } else {
-      setSelected(new Set(properties.map((p: any) => p.id)));
+      setSelected(new Set(properties.map(propertyReference).filter(Boolean)));
     }
   };
 
   const handleBulk = async (operation: string) => {
-    const ids = Array.from(selected);
+    const ids = Array.from(selected).filter(Boolean);
     if (!ids.length) return;
     if (operation === "delete" && !confirm(language === "ar"
       ? `حذف ${ids.length} عقار؟ لا يمكن التراجع.`
@@ -584,11 +591,11 @@ export default function PropertiesList() {
                       </TableRow>
                     )
                   : properties.map((p: any) => (
-                      <TableRow key={p.id} className="group hover:bg-muted/20">
+                        <TableRow key={propertyReference(p)} className="group hover:bg-muted/20">
                         <TableCell>
                           <Checkbox
-                            checked={selected.has(p.id)}
-                            onCheckedChange={() => toggleSelect(p.id)}
+                            checked={selected.has(propertyReference(p))}
+                            onCheckedChange={() => toggleSelect(propertyReference(p))}
                           />
                         </TableCell>
                         <TableCell className="font-mono text-xs text-muted-foreground">{p.code}</TableCell>
@@ -596,7 +603,7 @@ export default function PropertiesList() {
                           <div className="flex items-center gap-2">
                             {p.featured && <Star size={11} className="text-yellow-500 fill-yellow-500 shrink-0" />}
                             <Link
-                              href={`/properties/${p.id}`}
+                              href={propertyPath(p) ?? "/properties"}
                               className="font-medium hover:text-primary transition-colors truncate max-w-[200px] block"
                               title={p.title}
                             >
@@ -634,10 +641,16 @@ export default function PropertiesList() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => setLocation(`/properties/${p.id}`)}>
+                              <DropdownMenuItem onClick={() => {
+                                const path = propertyPath(p);
+                                if (path) setLocation(path);
+                              }}>
                                 عرض التفاصيل
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => setLocation(`/properties/${p.id}/edit`)}>
+                              <DropdownMenuItem onClick={() => {
+                                const path = propertyPath(p);
+                                if (path) setLocation(`${path}/edit`);
+                              }}>
                                 تعديل
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
@@ -646,7 +659,7 @@ export default function PropertiesList() {
                                 onClick={async () => {
                                   if (confirm("حذف هذا العقار؟")) {
                                     try {
-                                      await runBulk([p.id], "delete");
+                                       await runBulk([propertyReference(p)], "delete");
                                       await refetch();
                                     } catch (error: any) {
                                       toast({
@@ -718,10 +731,10 @@ export default function PropertiesList() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
                     {properties.map((p: any) => (
                       <PropertyCard
-                        key={p.id}
+                        key={propertyReference(p)}
                         p={p}
-                        selected={selected.has(p.id)}
-                        onSelect={() => toggleSelect(p.id)}
+                        selected={selected.has(propertyReference(p))}
+                        onSelect={() => toggleSelect(propertyReference(p))}
                          currency={currency}
                          language={language}
                       />
