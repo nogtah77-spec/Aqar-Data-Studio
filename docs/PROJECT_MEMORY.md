@@ -100,6 +100,9 @@ Durable architectural decisions are recorded in [`DECISIONS.md`](DECISIONS.md).
 - Nested Vercel API requests for reference-table updates and smart text parsing are routed
   through explicit serverless entrypoints; the shared catch-all remains the fallback for
   other API paths.
+- Reference-table switches use an optimistic React Query update so regions, property types,
+  and lookup options change visually on pointer press and roll back only if the API rejects
+  the mutation.
 - Parser results map supported fields into the existing property form, merge extracted
   project/city/facade/year/reception details into existing notes, and do not change the
   database schema.
