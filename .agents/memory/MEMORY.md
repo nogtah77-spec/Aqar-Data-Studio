@@ -1,3 +1,4 @@
 - [Node.js 20 WebSocket fix](nodejs-ws-fix.md) — @supabase/realtime-js needs ws package explicitly on Node 20
 - [API early-return pattern](api-early-return.md) — every early res.status() in Express 5 must be prefixed with return void
 - [Vercel Express typing](vercel-express-typing.md) — Vercel serverless entries should import the bundled API, not shared Express TypeScript sources
+- [GitHub push auth](github-push-auth.md) — use the managed GitHub push path when CLI Git lacks credentials
