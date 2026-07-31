@@ -227,6 +227,8 @@ const AMENITY_PATTERNS: { pattern: RegExp; value: string }[] = [
 
 const NUMBER_TOKEN = "[0-9][0-9\\s,.]*";
 const NUMBER_OR_WORD_TOKEN = `${NUMBER_TOKEN}|[\\u0600-\\u06ff]+|[a-z]+`;
+const RECEPTION_LABEL = "(?:ريسبشن|ريسيبشن|receptions?|living rooms?)";
+const RECEPTION_UNIT = "(?:قطعه?|قطع|pieces?)";
 
 function firstNumber(text: string, expression: RegExp): number | undefined {
   const match = text.match(expression);
@@ -351,13 +353,15 @@ export function parsePropertyText(text: string): ParsedPropertyFields {
     consumed.push(new RegExp(`${NUMBER_TOKEN}\\s*(?:حمامات|حمام|bathrooms?|baths?|ba)`, "ig"));
   }
 
-  const reception = firstNumber(norm, new RegExp(`(${NUMBER_OR_WORD_TOKEN})\\s*(?:ريسبشن|ريسيبشن|receptions?|living rooms?)`, "i"))
-    ?? firstNumber(norm, new RegExp(`(?:ريسبشن|ريسيبشن|receptions?|living rooms?)\\s*[:：-]?\\s*(${NUMBER_OR_WORD_TOKEN})`, "i"));
+  const reception = firstNumber(norm, new RegExp(`(${NUMBER_OR_WORD_TOKEN})\\s*${RECEPTION_UNIT}\\s*${RECEPTION_LABEL}`, "i"))
+    ?? firstNumber(norm, new RegExp(`(${NUMBER_OR_WORD_TOKEN})\\s*${RECEPTION_LABEL}\\s*${RECEPTION_UNIT}`, "i"))
+    ?? firstNumber(norm, new RegExp(`${RECEPTION_LABEL}\\s*[:：-]?\\s*(${NUMBER_OR_WORD_TOKEN})\\s*${RECEPTION_UNIT}`, "i"));
   if (reception !== undefined) {
     result.reception = Math.round(reception);
     hits++;
-    consumed.push(new RegExp(`${NUMBER_TOKEN}\\s*(?:ريسبشن|ريسيبشن|receptions?|living rooms?)`, "ig"));
-    consumed.push(new RegExp(`(?:ريسبشن|ريسيبشن|receptions?|living rooms?)\\s*[:：-]?\\s*${NUMBER_TOKEN}`, "ig"));
+    consumed.push(new RegExp(`${NUMBER_TOKEN}\\s*${RECEPTION_UNIT}\\s*${RECEPTION_LABEL}`, "ig"));
+    consumed.push(new RegExp(`${NUMBER_TOKEN}\\s*${RECEPTION_LABEL}\\s*${RECEPTION_UNIT}`, "ig"));
+    consumed.push(new RegExp(`${RECEPTION_LABEL}\\s*[:：-]?\\s*${NUMBER_TOKEN}\\s*${RECEPTION_UNIT}`, "ig"));
   }
 
   const floorMatch = norm.match(new RegExp(`(?:الدور|طابق|floor)\\s*[:：-]?\\s*(${NUMBER_OR_WORD_TOKEN})`, "i"));

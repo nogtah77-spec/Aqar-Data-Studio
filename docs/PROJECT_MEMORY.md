@@ -106,6 +106,9 @@ Durable architectural decisions are recorded in [`DECISIONS.md`](DECISIONS.md).
 - Parser results map supported fields into the existing property form, merge extracted
   project/city/facade/year/reception details into existing notes, and do not change the
   database schema.
+- Reception parsing requires an explicit unit (`قطعة`/`قطع` or `piece`/`pieces`); all analyzer
+  result, notes, and generated-description displays include the correct unit instead of a bare
+  reception number.
 - The property list now has explicit refresh/loading feedback, retryable error states,
   clearer empty states, search clearing, filter-aware reset behavior, selection reset
   on query/page changes, and keyboard-visible action controls.

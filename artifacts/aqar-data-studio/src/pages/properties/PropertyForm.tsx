@@ -23,6 +23,7 @@ import { apiFetch, readJsonResponse } from "@/lib/api";
 import { useCurrency } from "@/hooks/use-currency";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { formatReceptionPieces } from "@/lib/reception";
 
 // ── Smart text parser widget ──────────────────────────────────────────────────
 
@@ -78,7 +79,11 @@ function generatePropertyDescription(parsed: Record<string, any>, language: Desc
     parsed.area !== undefined && (isArabic ? `المساحة: ${parsed.area} م²` : `Area: ${parsed.area} sqm`),
     parsed.beds !== undefined && (isArabic ? `غرف النوم: ${parsed.beds}` : `Bedrooms: ${parsed.beds}`),
     parsed.baths !== undefined && (isArabic ? `الحمامات: ${parsed.baths}` : `Bathrooms: ${parsed.baths}`),
-    parsed.reception !== undefined && (isArabic ? `الريسبشن: ${parsed.reception}` : `Reception rooms: ${parsed.reception}`),
+    parsed.reception !== undefined && (
+      isArabic
+        ? `الريسبشن: ${formatReceptionPieces(parsed.reception, "ar")}`
+        : `Reception: ${formatReceptionPieces(parsed.reception, "en")}`
+    ),
     parsed.floorText && (isArabic ? `الدور: ${parsed.floorText}` : `Floor: ${parsed.floorText}`),
     parsed.floors !== undefined && (isArabic ? `عدد الأدوار: ${parsed.floors}` : `Building floors: ${parsed.floors}`),
     parsed.finishing && (isArabic ? `التشطيب: ${parsed.finishing}` : `Finish: ${parsed.finishing}`),
@@ -185,7 +190,7 @@ function SmartParser({
   const FIELD_LABELS: Record<string, string> = {
     code: "كود العقار", title: "العنوان", projectName: "المشروع", city: "المدينة",
     area: "المساحة (م²)", beds: "الغرف", baths: "الحمامات",
-    reception: "الريسبشن", floors: "عدد الأدوار", buildingYear: "سنة البناء",
+    reception: "الريسبشن (عدد القطع)", floors: "عدد الأدوار", buildingYear: "سنة البناء",
     price: "السعر", priceFormatted: "السعر", currency: "العملة",
     finishing: "التشطيب", view: "الإطلالة", facade: "الواجهة",
     regionName: "المنطقة", floor: "الدور", floorText: "الطابق (نصي)",
@@ -199,7 +204,11 @@ function SmartParser({
         .map(([k, v]) => ({
           key: k,
           label: FIELD_LABELS[k] ?? k,
-          value: k === "price" ? (parsed?.priceFormatted ?? String(v)) : Array.isArray(v) ? v.join("، ") : String(v),
+          value: k === "price"
+            ? (parsed?.priceFormatted ?? String(v))
+            : k === "reception"
+              ? formatReceptionPieces(v, language)
+              : Array.isArray(v) ? v.join("، ") : String(v),
         }))
     : [];
 
@@ -626,7 +635,7 @@ export default function PropertyForm() {
       parsed.city && `المدينة: ${parsed.city}`,
       parsed.facade && `الواجهة: ${parsed.facade}`,
       parsed.buildingYear && `سنة البناء: ${parsed.buildingYear}`,
-      parsed.reception && `الريسبشن: ${parsed.reception}`,
+      parsed.reception !== undefined && `الريسبشن: ${formatReceptionPieces(parsed.reception, "ar")}`,
       parsed.parking && `الجراج: ${parsed.parking}`,
       parsed.furnished && `التأثيث: ${parsed.furnished}`,
       parsed.additionalDetails?.length && parsed.additionalDetails.join("، "),
