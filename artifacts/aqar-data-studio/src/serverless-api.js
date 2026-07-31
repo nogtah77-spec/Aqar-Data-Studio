@@ -7,6 +7,22 @@ export function withApiPath(path) {
   };
 }
 
+function firstQueryValue(value) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export function withPropertyPath(suffix = "") {
+  return function handler(req, res) {
+    const rawId = firstQueryValue(req.query?.id);
+    if (typeof rawId !== "string" || rawId.trim() === "") {
+      return res.status(400).json({ error: "Property identifier is required" });
+    }
+
+    req.url = `/api/properties/${encodeURIComponent(rawId)}${suffix}`;
+    return app(req, res);
+  };
+}
+
 export default function handler(req, res) {
   const url = typeof req.url === "string" ? req.url : "/";
 
