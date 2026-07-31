@@ -5,3 +5,4 @@
 - [GitHub push auth](github-push-auth.md) — use the managed GitHub push path when CLI Git lacks credentials
 - [Reference-table status updates](reference-table-status-updates.md) — do not depend on PostgREST returning a deactivated row after an update
 - [Vercel API path prefix](vercel-api-path-prefix.md) — normalize catch-all function URLs before handing them to Express
+- [Path router compatibility](path-router-compatibility.md) — accept both preserved and stripped artifact prefixes at the API boundary

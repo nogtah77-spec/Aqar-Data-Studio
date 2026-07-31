@@ -35,11 +35,12 @@ export default function PropertyDetail() {
   const { t, language } = useLanguage();
   const { toast } = useToast();
 
-  const { data: property, isLoading, isError, error, refetch } = useGetProperty(params.id!, {
-    query: { queryKey: ["property", params.id] },
+  const propertyId = typeof params.id === "string" ? params.id.trim() : "";
+  const { data: property, isLoading, isError, error, refetch } = useGetProperty(propertyId, {
+    query: { enabled: Boolean(propertyId), queryKey: ["property", propertyId] },
   });
-  const { data: history } = useGetPropertyHistory(params.id!, {
-    query: { queryKey: ["property-history", params.id] },
+  const { data: history } = useGetPropertyHistory(propertyId, {
+    query: { enabled: Boolean(propertyId), queryKey: ["property-history", propertyId] },
   });
   const { mutateAsync: updateProperty } = useUpdateProperty();
 
@@ -96,7 +97,11 @@ export default function PropertyDetail() {
     return (
       <div className="p-8 text-center space-y-3">
         <p className="text-destructive font-medium">
-          {isError ? (error instanceof Error ? error.message : t("detail.notFound")) : t("detail.notFound")}
+          {isError
+            ? error instanceof Error && !error.message.includes("404")
+              ? error.message
+              : t("detail.notFound")
+            : t("detail.notFound")}
         </p>
         <div className="flex justify-center gap-2">
           {isError && <Button variant="outline" onClick={() => refetch()}>{t("common.retry")}</Button>}

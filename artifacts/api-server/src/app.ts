@@ -33,6 +33,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// The Replit/Vercel path router can either preserve the /api prefix or strip
+// it before handing the request to this service. Keep the canonical mount
+// first, then accept the stripped form as a compatibility fallback so both
+// property details and mutation endpoints resolve consistently.
 app.use("/api", router);
+app.use("/", router);
 
 export default app;
