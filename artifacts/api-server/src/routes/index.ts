@@ -9,6 +9,7 @@ import { usersRouter } from "./users.js";
 import { auditLogsRouter } from "./auditLogs.js";
 import { settingsRouter } from "./settings.js";
 import { searchRouter } from "./search.js";
+import { customersRouter } from "./customers.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 
 export const router = Router();
@@ -25,3 +26,4 @@ router.use("/users", requireRole("admin"), usersRouter);
 router.use("/audit-logs", requireRole("admin", "agent"), auditLogsRouter);
 router.use("/settings", settingsRouter);
 router.use("/search", searchRouter);
+router.use("/customers", customersRouter);

@@ -7,3 +7,4 @@
 - [Vercel API path prefix](vercel-api-path-prefix.md) — normalize catch-all function URLs before handing them to Express
 - [Path router compatibility](path-router-compatibility.md) — accept both preserved and stripped artifact prefixes at the API boundary
 - [Property identity contract](property-identity-contract.md) — resolve ID-or-code references consistently across details, edit, history, and bulk actions
+- [CRM Phase 1 foundation](crm-phase1-foundation.md) — local-only customer/tag schema foundation; never apply it to live Supabase without explicit approval

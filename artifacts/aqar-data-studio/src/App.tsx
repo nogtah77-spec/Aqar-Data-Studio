@@ -64,6 +64,7 @@ import Users from '@/pages/Users';
 import AuditLogs from '@/pages/AuditLogs';
 import Settings from '@/pages/Settings';
 import Search from '@/pages/Search';
+import Customers from '@/pages/Customers';
 import { RoleGuard } from '@/components/RoleGuard';
 
 const queryClient = new QueryClient({
@@ -131,6 +132,7 @@ function AuthenticatedApp() {
         <Route path="/audit-logs"><RoleGuard roles={["admin", "agent"]}><AuditLogs /></RoleGuard></Route>
         <Route path="/settings"><RoleGuard roles={["admin"]}><Settings /></RoleGuard></Route>
         <Route path="/search" component={Search} />
+        <Route path="/customers" component={Customers} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>

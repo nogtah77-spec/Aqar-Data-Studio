@@ -22,7 +22,9 @@ export type AuditResourceType =
   | "property_type"
   | "lookup_option"
   | "user"
-  | "settings";
+  | "settings"
+  | "customer"
+  | "customer_tag";
 
 interface AuditPayload {
   action: AuditAction;

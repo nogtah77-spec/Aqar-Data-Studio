@@ -610,6 +610,151 @@ export interface SearchResponse {
   total: number;
 }
 
+export type CustomerCustomerType = typeof CustomerCustomerType[keyof typeof CustomerCustomerType];
+
+
+export const CustomerCustomerType = {
+  owner: 'owner',
+  buyer: 'buyer',
+  investor: 'investor',
+  developer: 'developer',
+  broker: 'broker',
+  company: 'company',
+  custom: 'custom',
+} as const;
+
+export type CustomerStatus = typeof CustomerStatus[keyof typeof CustomerStatus];
+
+
+export const CustomerStatus = {
+  active: 'active',
+  archived: 'archived',
+} as const;
+
+export interface CustomerTag {
+  id: string;
+  name: string;
+  color: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Customer {
+  id: string;
+  fullName: string;
+  customerType: CustomerCustomerType;
+  /** @nullable */
+  customType?: string | null;
+  status: CustomerStatus;
+  /** @nullable */
+  phone?: string | null;
+  /** @nullable */
+  whatsapp?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  companyName?: string | null;
+  /** @nullable */
+  jobTitle?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  tags: CustomerTag[];
+}
+
+export type CustomerInputCustomerType = typeof CustomerInputCustomerType[keyof typeof CustomerInputCustomerType];
+
+
+export const CustomerInputCustomerType = {
+  owner: 'owner',
+  buyer: 'buyer',
+  investor: 'investor',
+  developer: 'developer',
+  broker: 'broker',
+  company: 'company',
+  custom: 'custom',
+} as const;
+
+export type CustomerInputStatus = typeof CustomerInputStatus[keyof typeof CustomerInputStatus];
+
+
+export const CustomerInputStatus = {
+  active: 'active',
+  archived: 'archived',
+} as const;
+
+export interface CustomerInput {
+  fullName: string;
+  customerType: CustomerInputCustomerType;
+  customType?: string;
+  status?: CustomerInputStatus;
+  phone?: string;
+  whatsapp?: string;
+  email?: string;
+  companyName?: string;
+  jobTitle?: string;
+  notes?: string;
+  tagIds?: string[];
+}
+
+export type CustomerUpdateCustomerType = typeof CustomerUpdateCustomerType[keyof typeof CustomerUpdateCustomerType];
+
+
+export const CustomerUpdateCustomerType = {
+  owner: 'owner',
+  buyer: 'buyer',
+  investor: 'investor',
+  developer: 'developer',
+  broker: 'broker',
+  company: 'company',
+  custom: 'custom',
+} as const;
+
+export type CustomerUpdateStatus = typeof CustomerUpdateStatus[keyof typeof CustomerUpdateStatus];
+
+
+export const CustomerUpdateStatus = {
+  active: 'active',
+  archived: 'archived',
+} as const;
+
+export interface CustomerUpdate {
+  fullName?: string;
+  customerType?: CustomerUpdateCustomerType;
+  customType?: string;
+  status?: CustomerUpdateStatus;
+  phone?: string;
+  whatsapp?: string;
+  email?: string;
+  companyName?: string;
+  jobTitle?: string;
+  notes?: string;
+  tagIds?: string[];
+}
+
+export interface CustomerListResponse {
+  data: Customer[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface CustomerTagInput {
+  name: string;
+  color?: string;
+}
+
+export interface CustomerTagUpdate {
+  name?: string;
+  color?: string;
+}
+
+export interface CustomerTagAssignmentInput {
+  tagIds: string[];
+}
+
 export type ListPropertiesParams = {
 page?: number;
 limit?: number;
@@ -653,6 +798,23 @@ userId?: string;
 from?: string;
 to?: string;
 };
+
+export type ListCustomersParams = {
+page?: number;
+limit?: number;
+search?: string;
+customerType?: string;
+status?: ListCustomersStatus;
+tagId?: string;
+};
+
+export type ListCustomersStatus = typeof ListCustomersStatus[keyof typeof ListCustomersStatus];
+
+
+export const ListCustomersStatus = {
+  active: 'active',
+  archived: 'archived',
+} as const;
 
 export type GlobalSearchParams = {
 q: string;

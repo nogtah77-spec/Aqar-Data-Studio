@@ -975,6 +975,280 @@ export const UpdateSettingsResponse = zod.object({
 
 
 /**
+ * @summary List customers with pagination and filters
+ */
+export const listCustomersQueryPageDefault = 1;
+export const listCustomersQueryLimitDefault = 20;
+
+export const ListCustomersQueryParams = zod.object({
+  "page": zod.coerce.number().default(listCustomersQueryPageDefault),
+  "limit": zod.coerce.number().default(listCustomersQueryLimitDefault),
+  "search": zod.coerce.string().optional(),
+  "customerType": zod.coerce.string().optional(),
+  "status": zod.enum(['active', 'archived']).optional(),
+  "tagId": zod.coerce.string().optional()
+})
+
+export const ListCustomersResponse = zod.object({
+  "data": zod.array(zod.object({
+  "id": zod.string(),
+  "fullName": zod.string(),
+  "customerType": zod.enum(['owner', 'buyer', 'investor', 'developer', 'broker', 'company', 'custom']),
+  "customType": zod.string().nullish(),
+  "status": zod.enum(['active', 'archived']),
+  "phone": zod.string().nullish(),
+  "whatsapp": zod.string().nullish(),
+  "email": zod.string().email().nullish(),
+  "companyName": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "tags": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "color": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}))
+})),
+  "total": zod.number(),
+  "page": zod.number(),
+  "limit": zod.number(),
+  "totalPages": zod.number()
+})
+
+
+/**
+ * @summary Create a customer
+ */
+export const CreateCustomerBody = zod.object({
+  "fullName": zod.string(),
+  "customerType": zod.enum(['owner', 'buyer', 'investor', 'developer', 'broker', 'company', 'custom']),
+  "customType": zod.string().optional(),
+  "status": zod.enum(['active', 'archived']).optional(),
+  "phone": zod.string().optional(),
+  "whatsapp": zod.string().optional(),
+  "email": zod.string().email().optional(),
+  "companyName": zod.string().optional(),
+  "jobTitle": zod.string().optional(),
+  "notes": zod.string().optional(),
+  "tagIds": zod.array(zod.string()).optional()
+})
+
+export const CreateCustomerResponse = zod.object({
+  "id": zod.string(),
+  "fullName": zod.string(),
+  "customerType": zod.enum(['owner', 'buyer', 'investor', 'developer', 'broker', 'company', 'custom']),
+  "customType": zod.string().nullish(),
+  "status": zod.enum(['active', 'archived']),
+  "phone": zod.string().nullish(),
+  "whatsapp": zod.string().nullish(),
+  "email": zod.string().email().nullish(),
+  "companyName": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "tags": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "color": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary Get a customer
+ */
+export const GetCustomerParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const GetCustomerResponse = zod.object({
+  "id": zod.string(),
+  "fullName": zod.string(),
+  "customerType": zod.enum(['owner', 'buyer', 'investor', 'developer', 'broker', 'company', 'custom']),
+  "customType": zod.string().nullish(),
+  "status": zod.enum(['active', 'archived']),
+  "phone": zod.string().nullish(),
+  "whatsapp": zod.string().nullish(),
+  "email": zod.string().email().nullish(),
+  "companyName": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "tags": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "color": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary Update a customer
+ */
+export const UpdateCustomerParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const UpdateCustomerBody = zod.object({
+  "fullName": zod.string().optional(),
+  "customerType": zod.enum(['owner', 'buyer', 'investor', 'developer', 'broker', 'company', 'custom']).optional(),
+  "customType": zod.string().optional(),
+  "status": zod.enum(['active', 'archived']).optional(),
+  "phone": zod.string().optional(),
+  "whatsapp": zod.string().optional(),
+  "email": zod.string().email().optional(),
+  "companyName": zod.string().optional(),
+  "jobTitle": zod.string().optional(),
+  "notes": zod.string().optional(),
+  "tagIds": zod.array(zod.string()).optional()
+})
+
+export const UpdateCustomerResponse = zod.object({
+  "id": zod.string(),
+  "fullName": zod.string(),
+  "customerType": zod.enum(['owner', 'buyer', 'investor', 'developer', 'broker', 'company', 'custom']),
+  "customType": zod.string().nullish(),
+  "status": zod.enum(['active', 'archived']),
+  "phone": zod.string().nullish(),
+  "whatsapp": zod.string().nullish(),
+  "email": zod.string().email().nullish(),
+  "companyName": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "tags": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "color": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary Delete a customer
+ */
+export const DeleteCustomerParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const DeleteCustomerResponse = zod.object({
+  "success": zod.boolean(),
+  "id": zod.string().optional()
+})
+
+
+/**
+ * @summary Replace a customer's tags
+ */
+export const SetCustomerTagsParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const SetCustomerTagsBody = zod.object({
+  "tagIds": zod.array(zod.string())
+})
+
+export const SetCustomerTagsResponse = zod.object({
+  "id": zod.string(),
+  "fullName": zod.string(),
+  "customerType": zod.enum(['owner', 'buyer', 'investor', 'developer', 'broker', 'company', 'custom']),
+  "customType": zod.string().nullish(),
+  "status": zod.enum(['active', 'archived']),
+  "phone": zod.string().nullish(),
+  "whatsapp": zod.string().nullish(),
+  "email": zod.string().email().nullish(),
+  "companyName": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "tags": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "color": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary List customer tags
+ */
+export const ListCustomerTagsResponseItem = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "color": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+export const ListCustomerTagsResponse = zod.array(ListCustomerTagsResponseItem)
+
+
+/**
+ * @summary Create a customer tag
+ */
+export const CreateCustomerTagBody = zod.object({
+  "name": zod.string(),
+  "color": zod.string().optional()
+})
+
+export const CreateCustomerTagResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "color": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Update a customer tag
+ */
+export const UpdateCustomerTagParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const UpdateCustomerTagBody = zod.object({
+  "name": zod.string().optional(),
+  "color": zod.string().optional()
+})
+
+export const UpdateCustomerTagResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "color": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Delete a customer tag
+ */
+export const DeleteCustomerTagParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const DeleteCustomerTagResponse = zod.object({
+  "success": zod.boolean(),
+  "id": zod.string().optional()
+})
+
+
+/**
  * @summary Global search across all entity types
  */
 export const globalSearchQueryLimitDefault = 10;

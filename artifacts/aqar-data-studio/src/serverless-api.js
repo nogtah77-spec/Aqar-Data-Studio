@@ -23,6 +23,30 @@ export function withPropertyPath(suffix = "") {
   };
 }
 
+export function withCustomerPath(suffix = "") {
+  return function handler(req, res) {
+    const rawId = firstQueryValue(req.query?.id);
+    if (typeof rawId !== "string" || rawId.trim() === "") {
+      return res.status(400).json({ error: "Customer identifier is required" });
+    }
+
+    req.url = `/api/customers/${encodeURIComponent(rawId)}${suffix}`;
+    return app(req, res);
+  };
+}
+
+export function withCustomerTagPath(suffix = "") {
+  return function handler(req, res) {
+    const rawId = firstQueryValue(req.query?.id);
+    if (typeof rawId !== "string" || rawId.trim() === "") {
+      return res.status(400).json({ error: "Customer tag identifier is required" });
+    }
+
+    req.url = `/api/customers/tags/${encodeURIComponent(rawId)}${suffix}`;
+    return app(req, res);
+  };
+}
+
 export default function handler(req, res) {
   const url = typeof req.url === "string" ? req.url : "/";
 

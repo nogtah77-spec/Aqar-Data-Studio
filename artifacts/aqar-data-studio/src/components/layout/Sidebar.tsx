@@ -14,6 +14,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 const navItems = [
   { href: "/", labelKey: "nav.dashboard", icon: LayoutDashboard, roles: ["admin", "agent", "viewer"] },
   { href: "/properties", labelKey: "nav.properties", icon: Building2, roles: ["admin", "agent", "viewer"] },
+  { href: "/customers", labelKey: "nav.customers", icon: Users, roles: ["admin", "agent", "viewer"] },
   { href: "/search", labelKey: "nav.search", icon: Search, roles: ["admin", "agent", "viewer"] },
   { href: "/compare", labelKey: "nav.compare", icon: GitCompare, roles: ["admin", "agent", "viewer"] },
   { href: "/import", labelKey: "nav.import", icon: Upload, roles: ["admin", "agent"] },

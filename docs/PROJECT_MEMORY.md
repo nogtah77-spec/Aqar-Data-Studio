@@ -36,6 +36,9 @@ Durable architectural decisions are recorded in [`DECISIONS.md`](DECISIONS.md).
 - Settings support company defaults, language, date format, and currency.
 - Audit logging, property history, image storage flows, dark mode, keyboard shortcuts,
   RTL layout, and responsive foundations are present.
+- CRM Phase 1 now includes an Arabic-first customer directory with customer CRUD,
+  active/archived status, contact fields, notes, reusable tags, role-aware mutations,
+  customer audit records, and a future-ready customer/property link table.
 
 ## Current repository state
 
@@ -62,6 +65,8 @@ Durable architectural decisions are recorded in [`DECISIONS.md`](DECISIONS.md).
 - Full authenticated CRUD, import, export, image, and role-specific flows still require
   a real user session and cannot be verified here without adding credentials or test
   property data.
+- The CRM Phase 1 migration is committed as a local file only and has not been applied
+  to the live Supabase database.
 
 ## Stabilization changes currently in the code
 
@@ -125,8 +130,9 @@ Durable architectural decisions are recorded in [`DECISIONS.md`](DECISIONS.md).
 
 ## Current next steps
 
-1. Complete authenticated end-to-end verification with existing admin, agent, and viewer sessions.
-2. Improve performance without architectural changes.
+1. Apply and verify the CRM Phase 1 migration only after explicit database approval.
+2. Complete authenticated end-to-end verification with existing admin, agent, and viewer sessions.
+3. Improve performance without architectural changes.
 
 ## Current constraints
 

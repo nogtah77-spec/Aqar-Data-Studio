@@ -7,6 +7,7 @@ export type AppLanguage = "ar" | "en";
 export type MessageKey =
   | "nav.dashboard"
   | "nav.properties"
+  | "nav.customers"
   | "nav.search"
   | "nav.compare"
   | "nav.import"
@@ -189,12 +190,68 @@ export type MessageKey =
   | "detail.external"
   | "detail.history"
   | "detail.noHistory"
-  | "notFound.title";
+  | "notFound.title"
+  | "customers.title"
+  | "customers.subtitle"
+  | "customers.new"
+  | "customers.edit"
+  | "customers.fullName"
+  | "customers.typeLabel"
+  | "customers.customType"
+  | "customers.phone"
+  | "customers.whatsapp"
+  | "customers.email"
+  | "customers.company"
+  | "customers.jobTitle"
+  | "customers.notes"
+  | "customers.tags"
+  | "customers.noTagsYet"
+  | "customers.total"
+  | "customers.active"
+  | "customers.archivedStatus"
+  | "customers.allStatuses"
+  | "customers.allTypes"
+  | "customers.allTags"
+  | "customers.search"
+  | "customers.directory"
+  | "customers.records"
+  | "customers.contact"
+  | "customers.statusLabel"
+  | "customers.lastUpdated"
+  | "customers.actions"
+  | "customers.loadError"
+  | "customers.empty"
+  | "customers.created"
+  | "customers.updated"
+  | "customers.saveError"
+  | "customers.archived"
+  | "customers.restored"
+  | "customers.archive"
+  | "customers.restore"
+  | "customers.delete"
+  | "customers.deleteConfirm"
+  | "customers.deleted"
+  | "customers.deleteError"
+  | "customers.manageTags"
+  | "customers.newTag"
+  | "customers.addTag"
+  | "customers.tagCreated"
+  | "customers.tagError"
+  | "customers.deleteTag"
+  | "customers.deleteTagConfirm"
+  | "customers.type.owner"
+  | "customers.type.buyer"
+  | "customers.type.investor"
+  | "customers.type.developer"
+  | "customers.type.broker"
+  | "customers.type.company"
+  | "customers.type.custom";
 
 const messages: Record<AppLanguage, Record<MessageKey, string>> = {
   ar: {
     "nav.dashboard": "الرئيسية",
     "nav.properties": "العقارات",
+    "nav.customers": "العملاء",
     "nav.search": "البحث",
     "nav.compare": "المقارنة",
     "nav.import": "استيراد",
@@ -378,10 +435,66 @@ const messages: Record<AppLanguage, Record<MessageKey, string>> = {
     "detail.history": "سجل التعديلات",
     "detail.noHistory": "لا يوجد سجل تاريخي.",
     "notFound.title": "الصفحة غير موجودة",
+    "customers.title": "العملاء",
+    "customers.subtitle": "إدارة بيانات العملاء ووسائل التواصل والوسوم.",
+    "customers.new": "عميل جديد",
+    "customers.edit": "تعديل العميل",
+    "customers.fullName": "الاسم الكامل",
+    "customers.typeLabel": "نوع العميل",
+    "customers.customType": "النوع المخصص",
+    "customers.phone": "الهاتف",
+    "customers.whatsapp": "واتساب",
+    "customers.email": "البريد الإلكتروني",
+    "customers.company": "الشركة",
+    "customers.jobTitle": "المسمى الوظيفي",
+    "customers.notes": "ملاحظات",
+    "customers.tags": "الوسوم",
+    "customers.noTagsYet": "لا توجد وسوم بعد.",
+    "customers.total": "إجمالي العملاء",
+    "customers.active": "نشط",
+    "customers.archivedStatus": "مؤرشف",
+    "customers.allStatuses": "كل الحالات",
+    "customers.allTypes": "كل الأنواع",
+    "customers.allTags": "كل الوسوم",
+    "customers.search": "بحث بالاسم أو الهاتف أو البريد…",
+    "customers.directory": "دليل العملاء",
+    "customers.records": "عميل",
+    "customers.contact": "التواصل",
+    "customers.statusLabel": "الحالة",
+    "customers.lastUpdated": "آخر تحديث",
+    "customers.actions": "الإجراءات",
+    "customers.loadError": "تعذر تحميل العملاء.",
+    "customers.empty": "لا يوجد عملاء مطابقون.",
+    "customers.created": "تمت إضافة العميل.",
+    "customers.updated": "تم تحديث العميل.",
+    "customers.saveError": "تعذر حفظ بيانات العميل.",
+    "customers.archived": "تمت أرشفة العميل.",
+    "customers.restored": "تمت استعادة العميل.",
+    "customers.archive": "أرشفة",
+    "customers.restore": "استعادة",
+    "customers.delete": "حذف",
+    "customers.deleteConfirm": "هل أنت متأكد من حذف هذا العميل نهائيًا؟",
+    "customers.deleted": "تم حذف العميل.",
+    "customers.deleteError": "تعذر حذف العميل.",
+    "customers.manageTags": "إدارة وسوم العملاء",
+    "customers.newTag": "اسم الوسم الجديد",
+    "customers.addTag": "إضافة وسم",
+    "customers.tagCreated": "تمت إضافة الوسم.",
+    "customers.tagError": "تعذر حفظ الوسم.",
+    "customers.deleteTag": "حذف الوسم",
+    "customers.deleteTagConfirm": "حذف هذا الوسم؟ سيُزال من العملاء المرتبطين به.",
+    "customers.type.owner": "مالك",
+    "customers.type.buyer": "مشتري",
+    "customers.type.investor": "مستثمر",
+    "customers.type.developer": "مطور",
+    "customers.type.broker": "وسيط",
+    "customers.type.company": "شركة",
+    "customers.type.custom": "مخصص",
   },
   en: {
     "nav.dashboard": "Dashboard",
     "nav.properties": "Properties",
+    "nav.customers": "Customers",
     "nav.search": "Search",
     "nav.compare": "Compare",
     "nav.import": "Import",
@@ -565,6 +678,61 @@ const messages: Record<AppLanguage, Record<MessageKey, string>> = {
     "detail.history": "Change history",
     "detail.noHistory": "No history available.",
     "notFound.title": "Page not found",
+    "customers.title": "Customers",
+    "customers.subtitle": "Manage customer profiles, contact details, and tags.",
+    "customers.new": "New customer",
+    "customers.edit": "Edit customer",
+    "customers.fullName": "Full name",
+    "customers.typeLabel": "Customer type",
+    "customers.customType": "Custom type",
+    "customers.phone": "Phone",
+    "customers.whatsapp": "WhatsApp",
+    "customers.email": "Email",
+    "customers.company": "Company",
+    "customers.jobTitle": "Job title",
+    "customers.notes": "Notes",
+    "customers.tags": "Tags",
+    "customers.noTagsYet": "No tags yet.",
+    "customers.total": "Total customers",
+    "customers.active": "Active",
+    "customers.archivedStatus": "Archived",
+    "customers.allStatuses": "All statuses",
+    "customers.allTypes": "All types",
+    "customers.allTags": "All tags",
+    "customers.search": "Search by name, phone, or email…",
+    "customers.directory": "Customer directory",
+    "customers.records": "customers",
+    "customers.contact": "Contact",
+    "customers.statusLabel": "Status",
+    "customers.lastUpdated": "Updated",
+    "customers.actions": "Actions",
+    "customers.loadError": "Could not load customers.",
+    "customers.empty": "No matching customers.",
+    "customers.created": "Customer created.",
+    "customers.updated": "Customer updated.",
+    "customers.saveError": "Could not save the customer.",
+    "customers.archived": "Customer archived.",
+    "customers.restored": "Customer restored.",
+    "customers.archive": "Archive",
+    "customers.restore": "Restore",
+    "customers.delete": "Delete",
+    "customers.deleteConfirm": "Are you sure you want to permanently delete this customer?",
+    "customers.deleted": "Customer deleted.",
+    "customers.deleteError": "Could not delete the customer.",
+    "customers.manageTags": "Manage customer tags",
+    "customers.newTag": "New tag name",
+    "customers.addTag": "Add tag",
+    "customers.tagCreated": "Tag created.",
+    "customers.tagError": "Could not save the tag.",
+    "customers.deleteTag": "Delete tag",
+    "customers.deleteTagConfirm": "Delete this tag? It will be removed from linked customers.",
+    "customers.type.owner": "Owner",
+    "customers.type.buyer": "Buyer",
+    "customers.type.investor": "Investor",
+    "customers.type.developer": "Developer",
+    "customers.type.broker": "Broker",
+    "customers.type.company": "Company",
+    "customers.type.custom": "Custom",
   },
 };
 
