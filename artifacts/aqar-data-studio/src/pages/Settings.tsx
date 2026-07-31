@@ -197,8 +197,8 @@ function CurrencyOptionRow({ code, language }: { code: string; language: "ar" | 
   const Flag = FLAG_COMPONENTS[getCurrencyCountryCode(currency.code)];
   return (
     <span className="flex min-w-0 items-center gap-2.5">
-      <span className="inline-flex h-5 w-7 shrink-0 overflow-hidden rounded-sm border border-border/70 bg-muted" aria-label={getCurrencyCountry(currency.code, language)}>
-        {Flag ? <Flag className="block h-full w-full" aria-hidden="true" /> : <span className="flex h-full w-full items-center justify-center text-[9px] font-semibold">{currency.code}</span>}
+      <span className="inline-flex h-5 w-[1.875rem] shrink-0 aspect-[3/2] overflow-hidden rounded-sm border border-border/70 bg-muted" aria-label={getCurrencyCountry(currency.code, language)}>
+        {Flag ? <Flag className="!block !h-full !w-full" aria-hidden="true" /> : <span className="flex h-full w-full items-center justify-center text-[9px] font-semibold">{currency.code}</span>}
       </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate font-medium">
