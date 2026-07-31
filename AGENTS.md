@@ -9,9 +9,13 @@ Before changing anything, read:
 1. `AGENTS.md`
 2. `docs/PROJECT_MEMORY.md`
 3. `replit.md`
-4. The relevant files under `docs/` and the relevant artifact package
+4. `docs/DECISIONS.md`
+5. `.agents/memory/MEMORY.md`
+6. The relevant files under `docs/` and the relevant artifact package
 
 Treat `docs/PROJECT_MEMORY.md` as the current project handoff. Update it after every important task; remove stale or duplicated information instead of appending a changelog.
+Treat `docs/DECISIONS.md` as the single source of truth for durable architectural decisions. Link to it rather than copying decision history into other files.
+Treat `.agents/memory/MEMORY.md` as the index for reusable agent lessons; keep project-specific state and decisions in `docs/PROJECT_MEMORY.md` and `docs/DECISIONS.md`.
 
 ## Non-negotiable rules
 
@@ -29,12 +33,30 @@ Treat `docs/PROJECT_MEMORY.md` as the current project handoff. Update it after e
 - Restart affected workflows after server, package, toolchain, or run-command changes, then inspect logs and the Preview.
 - Never push with force unless the user explicitly approves it.
 
+## DO NOT CHANGE WITHOUT OWNER APPROVAL
+
+No AI agent may modify any of the following without explicit approval from the project owner:
+
+- Environment Variables
+- GitHub Settings
+- Vercel Settings
+- Supabase Settings
+- Firebase Settings
+- Authentication Architecture
+- Database Schema (any incompatible change)
+- Build Architecture
+- Monorepo Structure
+- CI/CD Configuration
+
+If a proposed change could affect project structure, backward compatibility, the database, deployment, or project security, stop and ask the project owner for approval before executing it. Do not infer approval from an earlier request or from existing credentials.
+
 ## Repository conventions
 
 - `artifacts/aqar-data-studio/` is the primary React/Vite frontend.
 - `artifacts/api-server/` is the Express API.
 - `lib/api-spec/openapi.yaml` is the API contract source of truth.
 - `lib/api-client-react/` and `lib/api-zod/` are generated; do not hand-edit them.
+- `docs/DECISIONS.md` records active, superseded, and cancelled architectural decisions.
 - Supabase Auth is the auth provider. The service-role key is server-side only.
 - Use the existing artifact workflows; do not create duplicate workflows.
 - Keep Arabic-first RTL behavior, bilingual labels, accessibility, and responsive layouts intact.

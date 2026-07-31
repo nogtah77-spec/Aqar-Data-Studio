@@ -67,4 +67,4 @@ pnpm --filter @workspace/api-spec run codegen
 
 ## AI Agent Handoff
 
-`AGENTS.md` is the repository-wide operating contract for AI agents. Before any task, read `AGENTS.md`, `docs/PROJECT_MEMORY.md`, and this file. Keep the project memory current after important work.
+`AGENTS.md` is the repository-wide operating contract for AI agents. Before any task, read `AGENTS.md`, `docs/PROJECT_MEMORY.md`, `docs/DECISIONS.md`, `.agents/memory/MEMORY.md`, and this file. Keep project memory current after important work.

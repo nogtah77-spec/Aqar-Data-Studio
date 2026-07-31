@@ -12,12 +12,15 @@
 - API contract: `lib/api-spec/openapi.yaml`; React/Zod clients are generated from it.
 - Main branch: `main`, synchronized with `origin/main`.
 - Current workspace health: typecheck and production build pass; API and frontend workflows run successfully.
+- Durable architectural decisions are recorded in `docs/DECISIONS.md`; do not duplicate them here.
 
-## Last stable state
+## Known Stable State
 
-- Stable at commit `ea74367` (`chore: record git push authentication note`), following the QA/security commit `f2e6926`.
+- The last stable application baseline is commit `6b384a1` (`docs: establish persistent agent memory`); the current memory-system changes are documentation-only.
+- `pnpm run typecheck`, `pnpm build`, and `git diff --check` passed during the last verified baseline.
 - The Vercel serverless deployment path bundles the API before the frontend and had previously been verified successful.
-- No known uncommitted product changes at the time this memory was created.
+- API health is public, protected API routes require a Supabase Bearer session, and role checks are enforced server-side.
+- If a workflow reports `EADDRINUSE` on ports 8080 or 5173, treat it first as a stale-process/workflow collision; inspect and restart the managed workflow before changing application code.
 
 ## Recently resolved
 
@@ -30,16 +33,18 @@
 - Verified unauthenticated behavior: `/api/healthz` is public; protected routes return `401` without a session.
 - Resolved the Vercel API bundling/root-directory deployment failure.
 
+## Lessons Learned
+
+- **Vercel root-directory builds:** The serverless entry must import the bundled API, and the build order must build workspace libraries, the API, then the frontend. Directly importing shared Express TypeScript caused deployment failures.
+- **API authentication:** Browser requests made outside generated hooks must use the shared session-aware API helper; protecting only the server routes leaves manual requests unauthenticated.
+- **Role enforcement:** UI hiding is not a security boundary. Enforce authentication and role checks in the API, then mirror them in routes, navigation, and mutation controls.
+- **Documentation drift:** Roadmaps and architecture notes must be revised when a planned capability becomes implemented or an authentication/deployment decision changes.
+- **Workflow port collisions:** `EADDRINUSE` after a restart indicates an existing process is still bound to the managed port; restart the exact artifact workflow and inspect its logs before modifying ports or workflow configuration.
+- **Shared implementation lessons:** Node.js WebSocket and Express 5 early-return lessons are indexed in `.agents/memory/MEMORY.md`; keep their detailed records there rather than duplicating them in this project handoff.
+
 ## Important architectural decisions
 
-- Supabase is the source for authentication, PostgreSQL data, and storage; do not introduce a replacement database or auth provider without approval.
-- Express contains business logic for CRUD, import, export, audit, history, and text parsing.
-- OpenAPI is the contract source of truth; regenerate clients after contract changes.
-- The browser uses Supabase Auth for login and sends the access token as `Authorization: Bearer ...` to the API.
-- The API validates the token with Supabase and derives `admin`, `agent`, or `viewer` permissions from `user_profiles`.
-- The service-role key is server-side only. Browser code must never receive it.
-- Existing artifact workflows and preview paths are part of the deployment contract; preserve them.
-- Properties use status/history/audit behavior rather than introducing hard-delete semantics casually.
+See `docs/DECISIONS.md` for the canonical decision records. This section only points agents to that source to avoid conflicting copies.
 
 ## Completed capabilities
 
@@ -70,7 +75,7 @@ See `docs/ROADMAP.md` before starting new feature work. Current roadmap items in
 ## New-agent notes
 
 - Read `AGENTS.md` first; it is the operating contract.
-- Read this file and `replit.md` before inspecting or editing implementation files.
+- Read this file, `docs/DECISIONS.md`, and `replit.md` before inspecting or editing implementation files.
 - Check current git status and recent history before changing anything.
 - Do not assume documentation is current: verify named files, routes, and behavior in code.
 - Do not touch Secrets, environment variables, tokens, or external provider settings without user approval.
