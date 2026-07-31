@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useListLookupOptions,
   useCreateLookupOption,
@@ -190,6 +191,7 @@ export default function Lookup() {
   const createMutation = useCreateLookupOption();
   const deleteMutation = useDeleteLookupOption();
   const updateMutation = useUpdateLookupOption();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const handleCreate = (data: { category: string; value: string; label: string }) => {
@@ -217,11 +219,22 @@ export default function Lookup() {
   };
 
   const handleToggle = (id: string, active: boolean) => {
+    const queryKey = ["lookup-options", cat];
+    const previous = queryClient.getQueryData<any[]>(queryKey);
+    queryClient.setQueryData<any[]>(queryKey, (current) =>
+      Array.isArray(current)
+        ? current.map((item) => item.id === id ? { ...item, active } : item)
+        : current,
+    );
+
     updateMutation.mutate(
       { id, data: { active } },
       {
         onSuccess: () => { refetch(); toast({ title: "تم تحديث الخيار" }); },
-        onError: (error) => toast({ title: "تعذر تحديث الخيار", description: error.message, variant: "destructive" }),
+        onError: (error) => {
+          queryClient.setQueryData(queryKey, previous);
+          toast({ title: "تعذر تحديث الخيار", description: error.message, variant: "destructive" });
+        },
       },
     );
   };

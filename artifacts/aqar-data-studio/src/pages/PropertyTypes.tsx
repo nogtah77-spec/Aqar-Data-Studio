@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useListPropertyTypes,
   useCreatePropertyType,
@@ -158,6 +159,7 @@ export default function PropertyTypes() {
   const createMutation = useCreatePropertyType();
   const updateMutation = useUpdatePropertyType();
   const deleteMutation = useDeletePropertyType();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const [newName, setNewName] = useState("");
@@ -182,11 +184,21 @@ export default function PropertyTypes() {
   };
 
   const handleToggle = (id: string, active: boolean) => {
+    const previous = queryClient.getQueryData<any[]>(["property-types"]);
+    queryClient.setQueryData<any[]>(["property-types"], (current) =>
+      Array.isArray(current)
+        ? current.map((type) => type.id === id ? { ...type, active } : type)
+        : current,
+    );
+
     updateMutation.mutate(
       { id, data: { active } },
       {
         onSuccess: () => { refetch(); toast({ title: "تم تحديث حالة النوع" }); },
-        onError: (error) => toast({ title: "تعذر تحديث النوع", description: error.message, variant: "destructive" }),
+        onError: (error) => {
+          queryClient.setQueryData(["property-types"], previous);
+          toast({ title: "تعذر تحديث النوع", description: error.message, variant: "destructive" });
+        },
       },
     );
   };

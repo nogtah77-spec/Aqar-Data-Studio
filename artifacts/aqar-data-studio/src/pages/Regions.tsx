@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useListRegions,
   useCreateRegion,
@@ -157,6 +158,7 @@ export default function Regions() {
   const createMutation = useCreateRegion();
   const updateMutation = useUpdateRegion();
   const deleteMutation = useDeleteRegion();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const [newName, setNewName] = useState("");
@@ -181,11 +183,21 @@ export default function Regions() {
   };
 
   const handleToggle = (id: string, active: boolean) => {
+    const previous = queryClient.getQueryData<any[]>(["regions"]);
+    queryClient.setQueryData<any[]>(["regions"], (current) =>
+      Array.isArray(current)
+        ? current.map((region) => region.id === id ? { ...region, active } : region)
+        : current,
+    );
+
     updateMutation.mutate(
       { id, data: { active } },
       {
         onSuccess: () => { refetch(); toast({ title: "تم تحديث حالة المنطقة" }); },
-        onError: (error) => toast({ title: "تعذر تحديث المنطقة", description: error.message, variant: "destructive" }),
+        onError: (error) => {
+          queryClient.setQueryData(["regions"], previous);
+          toast({ title: "تعذر تحديث المنطقة", description: error.message, variant: "destructive" });
+        },
       },
     );
   };
