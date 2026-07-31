@@ -43,9 +43,9 @@ Durable architectural decisions are recorded in [`DECISIONS.md`](DECISIONS.md).
 - The repository contains the four agent-reference files:
   `AGENTS.md`, `docs/PROJECT_MEMORY.md`, `.github/copilot-instructions.md`, and
   `replit.md`.
-- The current implementation phase is the professional description generator. Work
-  proceeds in the requested order; currency, UX, bilingual, import/export, and
-  performance phases remain pending until the current phase is closed.
+- The current implementation phase is currency support. Work proceeds in the requested
+  order; UX, bilingual, import/export, and performance phases remain pending until the
+  current phase is closed.
 - Never force-push or overwrite remote work.
 
 ## Verification state
@@ -84,11 +84,15 @@ Durable architectural decisions are recorded in [`DECISIONS.md`](DECISIONS.md).
 - The new-property smart parser now includes a client-side professional description
   generator with Arabic/English output, an editable preview, clipboard copy, and
   explicit insertion into the description field without overwriting existing text.
+- Currency settings now include 42 Arab and global currencies with country/region flags,
+  Arabic labels, ISO codes, and symbols; existing formatting and the EGP default remain
+  unchanged.
 
 ## Current next steps
 
-1. Expand the currency catalog with global currencies and flag labels.
-2. Continue the remaining UX, bilingual, import/export, and performance phases in order.
+1. Improve the remaining property-form and settings UX.
+2. Complete Arabic/English interface coverage.
+3. Improve import/export, then performance, in that order.
 
 ## Current constraints
 

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { ARAB_CURRENCIES, DEFAULT_CURRENCY } from "@/lib/currencies";
+import { CURRENCIES, DEFAULT_CURRENCY, getCurrencyOption } from "@/lib/currencies";
 import { Save, Loader2, Settings as SettingsIcon } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -87,12 +87,21 @@ export default function Settings() {
                   value={formData.currency} 
                    onChange={e => setFormData({...formData, currency: e.target.value})}
                  >
-                   {ARAB_CURRENCIES.map((currency) => (
+                    {CURRENCIES.map((currency) => (
                      <option key={currency.code} value={currency.code}>
-                       {currency.flag} {currency.label} ({currency.code})
+                        {currency.flag} {currency.label} · {currency.code} ({currency.symbol})
                      </option>
                    ))}
                  </select>
+                  <div className="flex items-center gap-2 rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-sm">
+                    <span className="text-xl leading-none" aria-hidden="true">
+                      {getCurrencyOption(formData.currency).flag}
+                    </span>
+                    <span className="font-medium">{getCurrencyOption(formData.currency).label}</span>
+                    <span className="text-muted-foreground">
+                      {getCurrencyOption(formData.currency).code} · {getCurrencyOption(formData.currency).symbol}
+                    </span>
+                  </div>
                  <p className="text-xs text-muted-foreground">تُستخدم العملة المختارة في عرض أسعار العقارات والتقارير.</p>
               </div>
             </div>
