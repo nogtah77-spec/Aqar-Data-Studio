@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useListProperties, useListRegions, useListPropertyTypes } from "@workspace/api-client-react";
 import { Link, useLocation } from "wouter";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -12,6 +12,7 @@ import {
   Search, Plus, FileDown, Filter, MoreHorizontal, Trash2,
   Archive, CheckCircle2, Star, X, ChevronLeft, ChevronRight,
   LayoutGrid, LayoutList, Building2, MapPin, BookmarkPlus, Bookmark,
+  RefreshCw, AlertCircle, SearchX,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -197,13 +198,17 @@ export default function PropertiesList() {
     ...(filterStatus !== "__all" && { status: filterStatus }),
   };
 
-  const { data, isLoading, refetch } = useListProperties(params, {
+  const { data, isLoading, isFetching, isError, error, refetch } = useListProperties(params, {
     query: { queryKey: ["properties", params] },
   });
   const { data: regions = [] } = useListRegions({ query: { queryKey: ["regions"] } });
   const { data: types = [] } = useListPropertyTypes({ query: { queryKey: ["property-types"] } });
 
   const properties = data?.data ?? [];
+  const hasActiveQuery =
+    Boolean(search.trim()) ||
+    filterRegion !== "__all" || filterType !== "__all" ||
+    filterCategory !== "__all" || filterStatus !== "__all";
   const hasFilters =
     filterRegion !== "__all" || filterType !== "__all" ||
     filterCategory !== "__all" || filterStatus !== "__all";
@@ -211,12 +216,17 @@ export default function PropertiesList() {
     .filter((v) => v !== "__all").length;
 
   const clearFilters = () => {
+    setSearch("");
     setFilterRegion("__all");
     setFilterType("__all");
     setFilterCategory("__all");
     setFilterStatus("__all");
     setPage(1);
   };
+
+  useEffect(() => {
+    setSelected(new Set());
+  }, [page, search, filterRegion, filterType, filterCategory, filterStatus]);
 
   const toggleSelect = useCallback((id: string) => {
     setSelected((prev) => {
@@ -276,20 +286,44 @@ export default function PropertiesList() {
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
           <Search className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
+            <Input
             placeholder="بحث بالكود أو العنوان…"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             className="ps-9"
+              aria-label="البحث في العقارات"
           />
+            {search && (
+              <button
+                type="button"
+                onClick={() => { setSearch(""); setPage(1); }}
+                className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label="مسح البحث"
+              >
+                <X size={15} />
+              </button>
+            )}
         </div>
 
         <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 shrink-0"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              title="تحديث القائمة"
+              aria-label="تحديث قائمة العقارات"
+            >
+              <RefreshCw size={15} className={isFetching ? "animate-spin" : ""} />
+            </Button>
           <Button
             variant={showFilters ? "default" : "outline"}
             size="sm"
             className="gap-1.5 relative shrink-0"
             onClick={() => setShowFilters(!showFilters)}
+              aria-expanded={showFilters}
+              aria-controls="property-filters"
           >
             <Filter size={15} />
             <span>فلاتر</span>
@@ -306,6 +340,8 @@ export default function PropertiesList() {
               onClick={() => setView("table")}
               className={cn("px-2.5 py-1.5 transition-colors", view === "table" ? "bg-primary text-primary-foreground" : "hover:bg-muted")}
               title="جدول"
+              aria-label="عرض جدول"
+              aria-pressed={view === "table"}
             >
               <LayoutList size={15} />
             </button>
@@ -313,6 +349,8 @@ export default function PropertiesList() {
               onClick={() => setView("cards")}
               className={cn("px-2.5 py-1.5 transition-colors", view === "cards" ? "bg-primary text-primary-foreground" : "hover:bg-muted")}
               title="بطاقات"
+              aria-label="عرض بطاقات"
+              aria-pressed={view === "cards"}
             >
               <LayoutGrid size={15} />
             </button>
@@ -322,7 +360,7 @@ export default function PropertiesList() {
 
       {/* Expandable filters */}
       {showFilters && (
-        <div className="bg-muted/30 border border-border/50 rounded-xl p-4">
+        <div id="property-filters" className="bg-muted/30 border border-border/50 rounded-xl p-4">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground font-medium">المنطقة</label>
@@ -409,9 +447,9 @@ export default function PropertiesList() {
                   <BookmarkPlus size={12} /> حفظ الفلتر
                 </Button>
               )}
-              {hasFilters && (
+              {hasActiveQuery && (
                 <Button variant="ghost" size="sm" className="gap-1.5 text-xs h-7" onClick={clearFilters}>
-                  <X size={12} /> مسح
+                  <X size={12} /> مسح الكل
                 </Button>
               )}
             </div>
@@ -469,8 +507,21 @@ export default function PropertiesList() {
         </div>
       )}
 
+      {isError && (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-center">
+          <AlertCircle className="mx-auto mb-2 text-destructive" size={28} />
+          <p className="font-medium">تعذر تحميل قائمة العقارات</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {error instanceof Error ? error.message : "تحقق من الاتصال ثم حاول مرة أخرى."}
+          </p>
+          <Button variant="outline" size="sm" className="mt-4 gap-1.5" onClick={() => refetch()}>
+            <RefreshCw size={14} /> إعادة المحاولة
+          </Button>
+        </div>
+      )}
+
       {/* ── TABLE VIEW (md+) ── */}
-      {view === "table" && (
+      {!isError && view === "table" && (
         <div className="rounded-xl border bg-card overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <Table>
@@ -510,9 +561,9 @@ export default function PropertiesList() {
                           <div className="flex flex-col items-center gap-3 text-muted-foreground">
                             <Building2 size={40} className="opacity-20" />
                             <p>لا توجد عقارات مطابقة</p>
-                            {hasFilters && (
+                            {hasActiveQuery && (
                               <Button variant="outline" size="sm" onClick={clearFilters}>
-                                مسح الفلاتر
+                                مسح البحث والفلاتر
                               </Button>
                             )}
                           </div>
@@ -565,7 +616,7 @@ export default function PropertiesList() {
                         <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity" aria-label={`إجراءات ${p.title || p.code}`}>
                                 <MoreHorizontal size={14} />
                               </Button>
                             </DropdownMenuTrigger>
@@ -622,7 +673,7 @@ export default function PropertiesList() {
       )}
 
       {/* ── CARDS VIEW (all screens) ── */}
-      {view === "cards" && (
+      {!isError && view === "cards" && (
         <div className="space-y-3">
           {isLoading
             ? Array.from({ length: 4 }).map((_, i) => (
@@ -632,7 +683,13 @@ export default function PropertiesList() {
             ? (
                 <div className="flex flex-col items-center gap-3 text-muted-foreground py-16">
                   <Building2 size={40} className="opacity-20" />
-                  <p>لا توجد عقارات مطابقة</p>
+                   <SearchX size={18} className="opacity-50" />
+                   <p>{hasActiveQuery ? "لا توجد عقارات مطابقة للبحث الحالي" : "لا توجد عقارات بعد"}</p>
+                   {hasActiveQuery && (
+                     <Button variant="outline" size="sm" onClick={clearFilters}>
+                       مسح البحث والفلاتر
+                     </Button>
+                   )}
                 </div>
               )
             : (

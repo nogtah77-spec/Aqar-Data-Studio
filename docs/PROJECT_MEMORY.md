@@ -43,8 +43,8 @@ Durable architectural decisions are recorded in [`DECISIONS.md`](DECISIONS.md).
 - The repository contains the four agent-reference files:
   `AGENTS.md`, `docs/PROJECT_MEMORY.md`, `.github/copilot-instructions.md`, and
   `replit.md`.
-- The current implementation phase is currency support. Work proceeds in the requested
-  order; UX, bilingual, import/export, and performance phases remain pending until the
+- The current implementation phase is UX refinement. Work proceeds in the requested
+  order; bilingual, import/export, and performance phases remain pending until the
   current phase is closed.
 - Never force-push or overwrite remote work.
 
@@ -87,12 +87,14 @@ Durable architectural decisions are recorded in [`DECISIONS.md`](DECISIONS.md).
 - Currency settings now include 42 Arab and global currencies with country/region flags,
   Arabic labels, ISO codes, and symbols; existing formatting and the EGP default remain
   unchanged.
+- The property list now has explicit refresh/loading feedback, retryable error states,
+  clearer empty states, search clearing, filter-aware reset behavior, selection reset
+  on query/page changes, and keyboard-visible action controls.
 
 ## Current next steps
 
-1. Improve the remaining property-form and settings UX.
-2. Complete Arabic/English interface coverage.
-3. Improve import/export, then performance, in that order.
+1. Complete Arabic/English interface coverage.
+2. Improve import/export, then performance, in that order.
 
 ## Current constraints
 
