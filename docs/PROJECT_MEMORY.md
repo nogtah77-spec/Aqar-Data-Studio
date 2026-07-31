@@ -57,6 +57,9 @@ Durable architectural decisions are recorded in [`DECISIONS.md`](DECISIONS.md).
   stops before compilation when they are absent.
 - API health returns `200`; protected API routes return `401` without a session.
 - The frontend login screen renders without browser console errors in the final preview.
+- Vercel serverless routing now has explicit handlers for the protected nested routes used
+  by reference-table activation and smart text parsing; local handler checks reach Express
+  and return JSON auth responses instead of a platform `404 NOT_FOUND`.
 - Full authenticated CRUD, import, export, image, and role-specific flows still require
   a real user session and cannot be verified here without adding credentials or test
   property data.
@@ -94,6 +97,9 @@ Durable architectural decisions are recorded in [`DECISIONS.md`](DECISIONS.md).
 - Smart analyzer requests now validate response content before parsing, handle HTML,
   network, and non-OK responses without exposing technical messages, and keep the API
   error response JSON-safe.
+- Nested Vercel API requests for reference-table updates and smart text parsing are routed
+  through explicit serverless entrypoints; the shared catch-all remains the fallback for
+  other API paths.
 - Parser results map supported fields into the existing property form, merge extracted
   project/city/facade/year/reception details into existing notes, and do not change the
   database schema.
