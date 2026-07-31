@@ -55,15 +55,21 @@ function SmartParser({ onApply }: { onApply: (fields: Record<string, any>) => vo
 
   const FIELD_LABELS: Record<string, string> = {
     area: "المساحة (م²)", beds: "الغرف", baths: "الحمامات",
-    price: "السعر", finishing: "التشطيب", view: "الإطلالة",
+    price: "السعر", priceFormatted: "السعر", currency: "العملة",
+    finishing: "التشطيب", view: "الإطلالة",
     regionName: "المنطقة", floor: "الدور", floorText: "الطابق (نصي)",
-    layout: "التوزيع",
+    layout: "التوزيع", unitType: "نوع الوحدة", subArea: "الحي",
+    amenities: "المميزات", sourceEmail: "البريد", sourcePhones: "الهواتف",
   };
 
   const extractedFields = parsed
     ? Object.entries(parsed)
-        .filter(([k, v]) => k !== "confidence" && v !== undefined && v !== null && v !== "")
-        .map(([k, v]) => ({ key: k, label: FIELD_LABELS[k] ?? k, value: String(v) }))
+        .filter(([k, v]) => !["confidence", "priceFormatted", "additionalDetails", "description"].includes(k) && v !== undefined && v !== null && v !== "")
+        .map(([k, v]) => ({
+          key: k,
+          label: FIELD_LABELS[k] ?? k,
+          value: k === "price" ? (parsed?.priceFormatted ?? String(v)) : Array.isArray(v) ? v.join("، ") : String(v),
+        }))
     : [];
 
   const confidence = parsed?.confidence ?? 0;
@@ -179,7 +185,8 @@ const EMPTY_FORM = {
   code: "", title: "", price: "", area: "", beds: "", baths: "",
   description: "", status: "active", category: "sale",
   regionId: "", typeId: "", finishing: "", view: "",
-  subArea: "", floorText: "", floor: "", source: "", featured: false,
+  subArea: "", floorText: "", floor: "", source: "", sourceNotes: "",
+  master: "", elevator: "", location: "", notes: "", featured: false,
 };
 
 // ── Image manager (edit mode) ─────────────────────────────────────────────────
@@ -391,6 +398,11 @@ export default function PropertyForm() {
         floorText:   property.floorText   ?? "",
         floor:       property.floor?.toString()  ?? "",
         source:      property.source      ?? "",
+        sourceNotes: property.sourceNotes ?? "",
+        master:      property.master      ?? "",
+        elevator:    property.elevator    ?? "",
+        location:    property.location    ?? "",
+        notes:       property.notes       ?? "",
         featured:    property.featured    ?? false,
       });
     }
@@ -413,8 +425,20 @@ export default function PropertyForm() {
       ...(parsed.view      !== undefined && { view:      parsed.view }),
       ...(parsed.floor     !== undefined && { floor:     String(parsed.floor) }),
       ...(parsed.floorText !== undefined && { floorText: parsed.floorText }),
-      ...(parsed.layout    !== undefined && { description: prev.description || parsed.layout }),
+      ...(parsed.category  !== undefined && { category:  parsed.category }),
+      ...(parsed.subArea   !== undefined && { subArea:   parsed.subArea }),
+      ...(parsed.master   !== undefined && { master:     parsed.master }),
+      ...(parsed.elevator !== undefined && { elevator:   parsed.elevator }),
+      ...(parsed.location !== undefined && { location:   parsed.location }),
+      ...(parsed.source   !== undefined && { source:     parsed.source }),
+      ...(parsed.sourceEmail !== undefined && { sourceNotes: `البريد: ${parsed.sourceEmail}` }),
+      ...(parsed.sourcePhones?.length && { sourceNotes: `الهاتف: ${parsed.sourcePhones.join("، ")}` }),
+      ...(parsed.amenities?.length && { notes: parsed.amenities.join("، ") }),
+      ...(parsed.description !== undefined && { description: prev.description || parsed.description }),
       ...(parsed.regionId  !== undefined && { regionId:  parsed.regionId }),
+      ...(parsed.unitType !== undefined &&
+        (types as any[]).some((type) => type.id === parsed.unitType) &&
+        { typeId: parsed.unitType }),
     }));
   };
 
@@ -438,6 +462,11 @@ export default function PropertyForm() {
       subArea:     form.subArea     || undefined,
       floorText:   form.floorText   || undefined,
       source:      form.source      || undefined,
+      sourceNotes: form.sourceNotes || undefined,
+      master:      form.master      || undefined,
+      elevator:    form.elevator    || undefined,
+      location:    form.location    || undefined,
+      notes:       form.notes       || undefined,
       featured:    form.featured,
     };
 
@@ -565,6 +594,9 @@ export default function PropertyForm() {
               <Field label="المصدر">
                 <Input placeholder="مثال: موقع عقار مصر" value={form.source} onChange={set("source")} />
               </Field>
+              <Field label="الموقع التفصيلي">
+                <Input placeholder="مثال: بجوار النادي" value={form.location} onChange={set("location")} />
+              </Field>
             </div>
           </CardContent>
         </Card>
@@ -627,6 +659,12 @@ export default function PropertyForm() {
                   <Input placeholder="مثال: بحري، حديقة" value={form.view} onChange={set("view")} />
                 )}
               </Field>
+              <Field label="غرفة ماستر">
+                <Input placeholder="نعم / لا" value={form.master} onChange={set("master")} />
+              </Field>
+              <Field label="مصعد">
+                <Input placeholder="نعم / لا" value={form.elevator} onChange={set("elevator")} />
+              </Field>
             </div>
 
             <Field label="الوصف">
@@ -635,6 +673,15 @@ export default function PropertyForm() {
                 value={form.description}
                 onChange={set("description")}
                 rows={4}
+                className="resize-none"
+              />
+            </Field>
+            <Field label="ملاحظات ومميزات إضافية" className="mt-4">
+              <Textarea
+                placeholder="مميزات أو ملاحظات إضافية…"
+                value={form.notes}
+                onChange={set("notes")}
+                rows={2}
                 className="resize-none"
               />
             </Field>

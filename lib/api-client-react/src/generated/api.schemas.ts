@@ -298,6 +298,10 @@ export interface ParseTextResult {
   /** @nullable */
   price?: number | null;
   /** @nullable */
+  priceFormatted?: string | null;
+  /** @nullable */
+  currency?: string | null;
+  /** @nullable */
   finishing?: string | null;
   /** @nullable */
   view?: string | null;
@@ -315,6 +319,25 @@ export interface ParseTextResult {
   unitType?: string | null;
   /** @nullable */
   layout?: string | null;
+  /** @nullable */
+  master?: string | null;
+  /** @nullable */
+  elevator?: string | null;
+  /** @nullable */
+  location?: string | null;
+  /** @nullable */
+  parking?: string | null;
+  /** @nullable */
+  furnished?: string | null;
+  amenities?: string[];
+  additionalDetails?: string[];
+  /** @nullable */
+  source?: string | null;
+  sourcePhones?: string[];
+  /** @nullable */
+  sourceEmail?: string | null;
+  /** @nullable */
+  externalUrl?: string | null;
   /** @nullable */
   description?: string | null;
   confidence?: number;

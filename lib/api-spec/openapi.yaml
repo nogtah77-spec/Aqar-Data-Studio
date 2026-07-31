@@ -1029,6 +1029,8 @@ components:
         beds: { type: ["integer", "null"] }
         baths: { type: ["integer", "null"] }
         price: { type: ["integer", "null"] }
+        priceFormatted: { type: ["string", "null"] }
+        currency: { type: ["string", "null"] }
         finishing: { type: ["string", "null"] }
         view: { type: ["string", "null"] }
         regionId: { type: ["string", "null"] }
@@ -1038,6 +1040,17 @@ components:
         floorText: { type: ["string", "null"] }
         unitType: { type: ["string", "null"] }
         layout: { type: ["string", "null"] }
+        master: { type: ["string", "null"] }
+        elevator: { type: ["string", "null"] }
+        location: { type: ["string", "null"] }
+        parking: { type: ["string", "null"] }
+        furnished: { type: ["string", "null"] }
+        amenities: { type: array, items: { type: string } }
+        additionalDetails: { type: array, items: { type: string } }
+        source: { type: ["string", "null"] }
+        sourcePhones: { type: array, items: { type: string } }
+        sourceEmail: { type: ["string", "null"] }
+        externalUrl: { type: ["string", "null"] }
         description: { type: ["string", "null"] }
         confidence: { type: number }
 

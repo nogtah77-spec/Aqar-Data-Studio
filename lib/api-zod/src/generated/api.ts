@@ -229,7 +229,7 @@ export const ImportPropertiesResponse = zod.object({
   "dryRun": zod.boolean().optional(),
   "details": zod.array(zod.object({
 
-})).optional()
+}).passthrough()).optional()
 })
 
 
@@ -241,7 +241,7 @@ export const ExportPropertiesBody = zod.object({
   "columns": zod.array(zod.string()).optional(),
   "filters": zod.object({
 
-}).optional(),
+}).passthrough().optional(),
   "sortBy": zod.string().optional(),
   "sortDir": zod.enum(['asc', 'desc']).optional()
 })
@@ -260,7 +260,7 @@ export const BulkPropertiesBody = zod.object({
   "ids": zod.array(zod.string()).min(1),
   "updates": zod.object({
 
-}).optional()
+}).passthrough().optional()
 })
 
 export const BulkPropertiesResponse = zod.object({
@@ -278,19 +278,32 @@ export const ParsePropertyTextBody = zod.object({
 })
 
 export const ParsePropertyTextResponse = zod.object({
-  "area": zod.number().nullish(),
-  "beds": zod.number().nullish(),
-  "baths": zod.number().nullish(),
-  "price": zod.number().nullish(),
+  "area": zod.number().int().nullish(),
+  "beds": zod.number().int().nullish(),
+  "baths": zod.number().int().nullish(),
+  "price": zod.number().int().nullish(),
+  "priceFormatted": zod.string().nullish(),
+  "currency": zod.string().nullish(),
   "finishing": zod.string().nullish(),
   "view": zod.string().nullish(),
   "regionId": zod.string().nullish(),
   "regionName": zod.string().nullish(),
   "subArea": zod.string().nullish(),
-  "floor": zod.number().nullish(),
+  "floor": zod.number().int().nullish(),
   "floorText": zod.string().nullish(),
   "unitType": zod.string().nullish(),
   "layout": zod.string().nullish(),
+  "master": zod.string().nullish(),
+  "elevator": zod.string().nullish(),
+  "location": zod.string().nullish(),
+  "parking": zod.string().nullish(),
+  "furnished": zod.string().nullish(),
+  "amenities": zod.array(zod.string()).optional(),
+  "additionalDetails": zod.array(zod.string()).optional(),
+  "source": zod.string().nullish(),
+  "sourcePhones": zod.array(zod.string()).optional(),
+  "sourceEmail": zod.string().nullish(),
+  "externalUrl": zod.string().nullish(),
   "description": zod.string().nullish(),
   "confidence": zod.number().optional()
 })
@@ -519,10 +532,10 @@ export const GetPropertyHistoryResponseItem = zod.object({
   "changedBy": zod.string().nullish(),
   "snapshot": zod.object({
 
-}).optional(),
+}).passthrough().optional(),
   "diff": zod.object({
 
-}).optional()
+}).passthrough().optional()
 })
 export const GetPropertyHistoryResponse = zod.array(GetPropertyHistoryResponseItem)
 
@@ -785,7 +798,7 @@ export const GetDashboardActivityResponseItem = zod.object({
   "createdAt": zod.string(),
   "meta": zod.object({
 
-}).optional()
+}).passthrough().optional()
 })
 export const GetDashboardActivityResponse = zod.array(GetDashboardActivityResponseItem)
 
@@ -892,10 +905,10 @@ export const ListAuditLogsResponse = zod.object({
   "createdAt": zod.string(),
   "before": zod.object({
 
-}).optional(),
+}).passthrough().optional(),
   "after": zod.object({
 
-}).optional()
+}).passthrough().optional()
 })),
   "total": zod.number(),
   "page": zod.number(),

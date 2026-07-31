@@ -5,8 +5,8 @@
  * Aqar Data Studio — Professional Real Estate Data Management Platform
  * OpenAPI spec version: 1.0.0
  */
-import type { PropertyHistoryEntryDiff } from './propertyHistoryEntryDiff.js';
-import type { PropertyHistoryEntrySnapshot } from './propertyHistoryEntrySnapshot.js';
+import type { PropertyHistoryEntryDiff } from './propertyHistoryEntryDiff';
+import type { PropertyHistoryEntrySnapshot } from './propertyHistoryEntrySnapshot';
 
 export interface PropertyHistoryEntry {
   id: string;

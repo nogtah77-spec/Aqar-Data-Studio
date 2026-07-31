@@ -5,7 +5,7 @@
  * Aqar Data Studio — Professional Real Estate Data Management Platform
  * OpenAPI spec version: 1.0.0
  */
-import type { ListPropertiesSortDir } from './listPropertiesSortDir.js';
+import type { ListPropertiesSortDir } from './listPropertiesSortDir';
 
 export type ListPropertiesParams = {
 page?: number;

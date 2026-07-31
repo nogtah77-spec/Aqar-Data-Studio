@@ -5,10 +5,10 @@
  * Aqar Data Studio — Professional Real Estate Data Management Platform
  * OpenAPI spec version: 1.0.0
  */
-import type { DashboardStatsByCategoryItem } from './dashboardStatsByCategoryItem.js';
-import type { DashboardStatsByRegionItem } from './dashboardStatsByRegionItem.js';
-import type { DashboardStatsByStatusItem } from './dashboardStatsByStatusItem.js';
-import type { DashboardStatsByTypeItem } from './dashboardStatsByTypeItem.js';
+import type { DashboardStatsByCategoryItem } from './dashboardStatsByCategoryItem';
+import type { DashboardStatsByRegionItem } from './dashboardStatsByRegionItem';
+import type { DashboardStatsByStatusItem } from './dashboardStatsByStatusItem';
+import type { DashboardStatsByTypeItem } from './dashboardStatsByTypeItem';
 
 export interface DashboardStats {
   totalProperties: number;

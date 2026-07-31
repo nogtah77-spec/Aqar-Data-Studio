@@ -5,7 +5,7 @@
  * Aqar Data Studio — Professional Real Estate Data Management Platform
  * OpenAPI spec version: 1.0.0
  */
-import type { UserInputRole } from './userInputRole.js';
+import type { UserInputRole } from './userInputRole';
 
 export interface UserInput {
   email: string;

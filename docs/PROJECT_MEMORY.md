@@ -43,8 +43,9 @@ Durable architectural decisions are recorded in [`DECISIONS.md`](DECISIONS.md).
 - The repository contains the four agent-reference files:
   `AGENTS.md`, `docs/PROJECT_MEMORY.md`, `.github/copilot-instructions.md`, and
   `replit.md`.
-- The stabilization pass is focused on confirmed reliability, security, validation, and
-  cache-refresh issues; it does not add product features or change the UI design.
+- The current implementation phase is the smart property analyzer. Work proceeds in the
+  requested order; later description, currency, UX, bilingual, import/export, and
+  performance phases remain pending until the analyzer phase is closed.
 - Never force-push or overwrite remote work.
 
 ## Verification state
@@ -74,14 +75,18 @@ Durable architectural decisions are recorded in [`DECISIONS.md`](DECISIONS.md).
 - User activation/deactivation now updates the Supabase Auth ban state and returns the
   persisted status.
 - Lookup-option create/update/delete operations now write audit records.
+- The smart analyzer now normalizes Arabic/Persian numerals, extracts Arabic and English
+  property facts, recognizes compact area/price/floor formats, identifies currencies and
+  amenities, formats numeric prices with thousands separators, and returns residual
+  additional details without repeating extracted facts.
+- The analyzer result contract is maintained through OpenAPI codegen, with Orval pinned
+  to Zod 3 output compatibility.
 
 ## Current next steps
 
-1. Run authenticated end-to-end CRUD/import/export/image tests with an approved test
-   account and non-production fixture data.
-2. Validate Supabase write/RLS behavior in the connected project without changing its
-   schema or settings.
-3. Keep monitoring workflow logs and browser console output after future runtime changes.
+1. Add the professional copy-ready description box based on analyzer output.
+2. Expand the currency catalog with global currencies and flag labels.
+3. Continue the remaining UX, bilingual, import/export, and performance phases in order.
 
 ## Current constraints
 

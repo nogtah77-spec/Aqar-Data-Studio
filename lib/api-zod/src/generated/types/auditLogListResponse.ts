@@ -5,7 +5,7 @@
  * Aqar Data Studio — Professional Real Estate Data Management Platform
  * OpenAPI spec version: 1.0.0
  */
-import type { AuditLog } from './auditLog.js';
+import type { AuditLog } from './auditLog';
 
 export interface AuditLogListResponse {
   data: AuditLog[];
