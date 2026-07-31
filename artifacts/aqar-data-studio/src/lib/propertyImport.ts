@@ -483,11 +483,17 @@ export function parseDelimitedText(
   types: RegionLite[] = []
 ): ParseResult {
   // Strip BOM
-  const cleaned = text.replace(/^\uFEFF/, "");
+  const cleaned = text.replace(/^\uFEFF/, "").replace(/\u0000/g, "");
 
   // Auto-detect delimiter
   const firstLine = cleaned.split("\n")[0] ?? "";
-  const delimiter = firstLine.includes("\t") ? "\t" : ",";
+  const delimiter = firstLine.includes("\t")
+    ? "\t"
+    : firstLine.includes(";")
+      ? ";"
+      : firstLine.includes("|")
+        ? "|"
+        : ",";
 
   // RFC-4180 compliant split
   const rows = splitCsvIntoRows(cleaned, delimiter);
@@ -566,7 +572,7 @@ export function parseDelimitedText(
 
     // Resolve regionId from regionName column or explicit ID
     if (!p.regionId && regionNameRaw) {
-      p.regionId = regionByName[regionNameRaw] ?? regionByContains(regionNameRaw) ?? "";
+      p.regionId = regionByName[regionNameRaw] ?? (regionByContains(regionNameRaw) || undefined);
       p.regionName = regionNameRaw;
     }
     if (!p.regionId && p.regionId !== undefined) {

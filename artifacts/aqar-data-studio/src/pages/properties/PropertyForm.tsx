@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import {
   useGetProperty, useCreateProperty, useUpdateProperty,
@@ -529,6 +530,7 @@ function ImageManager({
 
 export default function PropertyForm() {
   const currency = useCurrency();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
   const params = useParams();
   const [, setLocation] = useLocation();
@@ -714,7 +716,12 @@ export default function PropertyForm() {
     } else {
       createMutation.mutate({ data: payload }, {
         onSuccess: (res: any) => {
+          if (!res?.id || typeof res.id !== "string") {
+            toast({ title: "تعذر فتح العقار بعد الإضافة", description: "استجابة الخادم لا تحتوي على معرّف صالح.", variant: "destructive" });
+            return;
+          }
           toast({ title: "تمت إضافة العقار" });
+          queryClient.invalidateQueries({ queryKey: ["properties"] });
           setLocation(`/properties/${res.id}`);
         },
         onError: (error) => toast({ title: "تعذر إضافة العقار", description: error.message, variant: "destructive" }),

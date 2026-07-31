@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { supabaseAdmin } from "../lib/supabase.js";
-import { logAudit } from "../lib/audit.js";
+import { logAudit, auditActor } from "../lib/audit.js";
 
 export const usersRouter = Router();
 
@@ -50,7 +50,7 @@ usersRouter.post("/", async (req, res) => {
       role,
     });
 
-    await logAudit({ action: "create", resourceType: "user", resourceId: authUser.user.id, resourceLabel: email });
+    await logAudit({ action: "create", resourceType: "user", resourceId: authUser.user.id, resourceLabel: email, ...auditActor(req) });
 
     res.status(201).json({
       id: authUser.user.id,
@@ -88,7 +88,7 @@ usersRouter.patch("/:id", async (req, res) => {
       if (authError) throw authError;
     }
 
-    await logAudit({ action: "update", resourceType: "user", resourceId: req.params.id });
+    await logAudit({ action: "update", resourceType: "user", resourceId: req.params.id, after: updates, ...auditActor(req) });
 
     const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(req.params.id);
     const { data: profile } = await supabaseAdmin
@@ -116,7 +116,7 @@ usersRouter.delete("/:id", async (req, res) => {
     const { error } = await supabaseAdmin.auth.admin.deleteUser(req.params.id);
     if (error) throw error;
     await supabaseAdmin.from("user_profiles").delete().eq("id", req.params.id);
-    await logAudit({ action: "delete", resourceType: "user", resourceId: req.params.id });
+    await logAudit({ action: "delete", resourceType: "user", resourceId: req.params.id, ...auditActor(req) });
     res.json({ success: true, id: req.params.id });
   } catch (err: any) {
     res.status(500).json({ error: err.message });

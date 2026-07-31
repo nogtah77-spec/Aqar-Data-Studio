@@ -90,8 +90,18 @@ const FORMATS = [
     action: "download",
   },
   {
+    value: "tsv",
+    label: "TSV",
+    ext: ".tsv",
+    icon: FileText,
+    desc: "قيم مفصولة بعلامات تبويب",
+    color: "text-cyan-600",
+    bg: "bg-cyan-500/10",
+    action: "download",
+  },
+  {
     value: "txt",
-    label: "TXT / TSV",
+    label: "TXT",
     ext: ".txt",
     icon: File,
     desc: "نص خام مفصول بمسافات للاستخدام العام",
@@ -304,7 +314,8 @@ export default function Export() {
                              excel: "Compatible with Microsoft Excel and Google Sheets",
                              csv: "Comma-separated values for spreadsheet applications",
                              json: "Structured data for developers and API integrations",
-                             txt: "Raw text separated by tabs for general use",
+                              txt: "Raw text for general use",
+                              tsv: "Tab-separated values for spreadsheet applications",
                              pdf: "Formatted report for printing or saving as PDF",
                            } as Record<string, string>)[fmt.value]}
                        </p>

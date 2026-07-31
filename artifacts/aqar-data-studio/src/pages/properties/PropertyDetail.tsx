@@ -35,7 +35,7 @@ export default function PropertyDetail() {
   const { t, language } = useLanguage();
   const { toast } = useToast();
 
-  const { data: property, isLoading } = useGetProperty(params.id!, {
+  const { data: property, isLoading, isError, error, refetch } = useGetProperty(params.id!, {
     query: { queryKey: ["property", params.id] },
   });
   const { data: history } = useGetPropertyHistory(params.id!, {
@@ -93,7 +93,17 @@ export default function PropertyDetail() {
   }
 
   if (!property) {
-    return <div className="p-8 text-center text-destructive">{t("detail.notFound")}</div>;
+    return (
+      <div className="p-8 text-center space-y-3">
+        <p className="text-destructive font-medium">
+          {isError ? (error instanceof Error ? error.message : t("detail.notFound")) : t("detail.notFound")}
+        </p>
+        <div className="flex justify-center gap-2">
+          {isError && <Button variant="outline" onClick={() => refetch()}>{t("common.retry")}</Button>}
+          <Button asChild variant="ghost"><Link href="/properties">{language === "ar" ? "العودة للعقارات" : "Back to properties"}</Link></Button>
+        </div>
+      </div>
+    );
   }
 
   const images: string[] = (property as any).images ?? [];

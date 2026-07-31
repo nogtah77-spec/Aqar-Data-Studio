@@ -1,4 +1,6 @@
 import { supabaseAdmin } from "./supabase.js";
+import type { Request } from "express";
+import type { AuthenticatedRequest } from "../middleware/auth.js";
 
 export type AuditAction =
   | "create"
@@ -9,6 +11,9 @@ export type AuditAction =
   | "import"
   | "export"
   | "archive"
+  | "activate"
+  | "feature"
+  | "unfeature"
   | "duplicate";
 
 export type AuditResourceType =
@@ -29,6 +34,14 @@ interface AuditPayload {
   before?: unknown;
   after?: unknown;
   meta?: Record<string, unknown>;
+}
+
+export function auditActor(req: Request): Pick<AuditPayload, "userId" | "userName"> {
+  const { authUser } = req as AuthenticatedRequest;
+  return {
+    userId: authUser?.id,
+    userName: authUser?.name ?? authUser?.email,
+  };
 }
 
 export async function logAudit(payload: AuditPayload): Promise<void> {

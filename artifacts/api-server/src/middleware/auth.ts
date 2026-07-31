@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import { supabaseAdmin } from "../lib/supabase.js";
 
 export type AuthenticatedRequest = Request & {
-  authUser?: { id: string; email?: string };
+  authUser?: { id: string; email?: string; name?: string | null };
   authRole?: "admin" | "agent" | "viewer";
 };
 
@@ -23,7 +23,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 
   const { data: profile } = await supabaseAdmin
     .from("user_profiles")
-    .select("role")
+    .select("role, name")
     .eq("id", data.user.id)
     .maybeSingle();
 
@@ -31,6 +31,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   authenticatedRequest.authUser = {
     id: data.user.id,
     email: data.user.email,
+    name: profile?.name ?? data.user.user_metadata?.name ?? data.user.email ?? null,
   };
   authenticatedRequest.authRole =
     profile?.role === "admin" || profile?.role === "agent" ? profile.role : "viewer";

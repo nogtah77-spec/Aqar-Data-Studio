@@ -7,6 +7,30 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 
+const ACTION_LABELS: Record<string, { ar: string; en: string }> = {
+  create: { ar: "إنشاء", en: "Created" },
+  update: { ar: "تحديث", en: "Updated" },
+  delete: { ar: "حذف", en: "Deleted" },
+  bulk_delete: { ar: "حذف جماعي", en: "Bulk delete" },
+  bulk_update: { ar: "تحديث جماعي", en: "Bulk update" },
+  archive: { ar: "أرشفة", en: "Archived" },
+  activate: { ar: "تنشيط", en: "Activated" },
+  feature: { ar: "تمييز", en: "Featured" },
+  unfeature: { ar: "إلغاء التمييز", en: "Unfeatured" },
+  import: { ar: "استيراد", en: "Imported" },
+  export: { ar: "تصدير", en: "Exported" },
+  duplicate: { ar: "تكرار", en: "Duplicated" },
+};
+
+const RESOURCE_LABELS: Record<string, { ar: string; en: string }> = {
+  property: { ar: "عقار", en: "Property" },
+  region: { ar: "منطقة", en: "Region" },
+  property_type: { ar: "نوع عقار", en: "Property type" },
+  lookup_option: { ar: "خيار قائمة", en: "Lookup option" },
+  user: { ar: "مستخدم", en: "User" },
+  settings: { ar: "إعدادات", en: "Settings" },
+};
+
 export default function AuditLogs() {
   const { t, language } = useLanguage();
   const [page, setPage] = useState(1);
@@ -57,10 +81,10 @@ export default function AuditLogs() {
                   <TableCell className="font-medium">{log.userName || t("dashboard.system")}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className="font-mono text-[10px] uppercase">
-                      {log.action}
+                      {ACTION_LABELS[log.action]?.[language] ?? log.action}
                     </Badge>
                   </TableCell>
-                  <TableCell>{log.resourceType}</TableCell>
+                  <TableCell>{RESOURCE_LABELS[log.resourceType]?.[language] ?? log.resourceType}</TableCell>
                   <TableCell className="font-medium">
                     {log.resourceLabel || log.resourceId || '-'}
                   </TableCell>

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { supabaseAdmin } from "../lib/supabase.js";
-import { logAudit } from "../lib/audit.js";
+import { logAudit, auditActor } from "../lib/audit.js";
 import { requireRole } from "../middleware/auth.js";
 
 export const propertyTypesRouter = Router();
@@ -53,7 +53,7 @@ propertyTypesRouter.post("/", async (req, res) => {
       .single();
 
     if (error) throw error;
-    await logAudit({ action: "create", resourceType: "property_type", resourceId: id, resourceLabel: name });
+    await logAudit({ action: "create", resourceType: "property_type", resourceId: id, resourceLabel: name, ...auditActor(req) });
     res.status(201).json({ ...data, propertyCount: 0 });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -93,6 +93,7 @@ propertyTypesRouter.patch("/:id", async (req, res) => {
       resourceId: req.params.id,
       before,
       after: data,
+      ...auditActor(req),
     });
     return void res.json({ ...data, propertyCount: 0 });
   } catch (err: any) {
@@ -104,7 +105,7 @@ propertyTypesRouter.delete("/:id", async (req, res) => {
   try {
     const { error } = await supabaseAdmin.from("property_types").delete().eq("id", req.params.id);
     if (error) throw error;
-    await logAudit({ action: "delete", resourceType: "property_type", resourceId: req.params.id });
+    await logAudit({ action: "delete", resourceType: "property_type", resourceId: req.params.id, ...auditActor(req) });
     res.json({ success: true, id: req.params.id });
   } catch (err: any) {
     res.status(500).json({ error: err.message });

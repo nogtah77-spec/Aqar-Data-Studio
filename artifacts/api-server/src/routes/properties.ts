@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { supabaseAdmin } from "../lib/supabase.js";
-import { logAudit, generateId } from "../lib/audit.js";
+import { logAudit, generateId, auditActor } from "../lib/audit.js";
 import { parsePropertyText } from "../lib/text-parser.js";
 import { importPropertiesEngine } from "../lib/import-engine.js";
 import { exportPropertiesEngine } from "../lib/export-engine.js";
@@ -113,15 +113,17 @@ propertiesRouter.post("/", async (req, res) => {
 
     if (error) throw error;
 
+    const created = mapRow(data);
     await logAudit({
       action: "create",
       resourceType: "property",
-      resourceId: id,
-      resourceLabel: body.code,
+      resourceId: created.id,
+      resourceLabel: created.code,
       after: body,
+      ...auditActor(req),
     });
 
-    res.status(201).json(mapRow(data));
+    res.status(201).json(created);
   } catch (err: any) {
     req.log.error({ err }, "createProperty error");
     res.status(500).json({ error: err.message });
@@ -138,6 +140,7 @@ propertiesRouter.post("/import", async (req, res) => {
       action: "import",
       resourceType: "property",
       meta: { added: result.added, updated: result.updated, dryRun },
+      ...auditActor(req),
     });
 
     res.json(result);
@@ -164,6 +167,12 @@ propertiesRouter.post("/export", requireRole("admin", "agent"), async (req, res)
     if (!inline) {
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     }
+    await logAudit({
+      action: "export",
+      resourceType: "property",
+      meta: { format, columns: columns?.length ?? null, filters },
+      ...auditActor(req),
+    });
     res.send(buffer);
   } catch (err: any) {
     req.log.error({ err }, "exportProperties error");
@@ -188,7 +197,7 @@ propertiesRouter.post("/bulk", async (req, res) => {
       if (error) throw error;
       affected = count ?? ids.length;
 
-      await logAudit({ action: "bulk_delete", resourceType: "property", meta: { ids } });
+      await logAudit({ action: "bulk_delete", resourceType: "property", meta: { ids }, ...auditActor(req) });
     } else if (operation === "update") {
       const { error, count } = await supabaseAdmin
         .from("properties")
@@ -197,7 +206,7 @@ propertiesRouter.post("/bulk", async (req, res) => {
       if (error) throw error;
       affected = count ?? ids.length;
 
-      await logAudit({ action: "bulk_update", resourceType: "property", meta: { ids, updates } });
+      await logAudit({ action: "bulk_update", resourceType: "property", meta: { ids, updates }, ...auditActor(req) });
     } else if (operation === "archive") {
       const { error, count } = await supabaseAdmin
         .from("properties")
@@ -205,6 +214,7 @@ propertiesRouter.post("/bulk", async (req, res) => {
         .in("id", ids);
       if (error) throw error;
       affected = count ?? ids.length;
+      await logAudit({ action: "archive", resourceType: "property", meta: { ids }, ...auditActor(req) });
     } else if (operation === "activate") {
       const { error, count } = await supabaseAdmin
         .from("properties")
@@ -212,6 +222,7 @@ propertiesRouter.post("/bulk", async (req, res) => {
         .in("id", ids);
       if (error) throw error;
       affected = count ?? ids.length;
+      await logAudit({ action: "activate", resourceType: "property", meta: { ids }, ...auditActor(req) });
     } else if (operation === "feature") {
       const { error, count } = await supabaseAdmin
         .from("properties")
@@ -219,6 +230,7 @@ propertiesRouter.post("/bulk", async (req, res) => {
         .in("id", ids);
       if (error) throw error;
       affected = count ?? ids.length;
+      await logAudit({ action: "feature", resourceType: "property", meta: { ids }, ...auditActor(req) });
     } else if (operation === "unfeature") {
       const { error, count } = await supabaseAdmin
         .from("properties")
@@ -226,6 +238,7 @@ propertiesRouter.post("/bulk", async (req, res) => {
         .in("id", ids);
       if (error) throw error;
       affected = count ?? ids.length;
+      await logAudit({ action: "unfeature", resourceType: "property", meta: { ids }, ...auditActor(req) });
     } else {
       return void res.status(400).json({ error: `Unknown operation: ${operation}` });
     }
@@ -250,6 +263,32 @@ propertiesRouter.post("/parse-text", async (req, res) => {
   }
 });
 
+// ── HISTORY ───────────────────────────────────────────────────────────────
+propertiesRouter.get("/:id/history", async (req, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("property_history")
+      .select()
+      .eq("property_id", req.params.id)
+      .order("changed_at", { ascending: false });
+
+    if (error) throw error;
+    return void res.json(
+      (data ?? []).map((h) => ({
+        id: h.id,
+        propertyId: h.property_id,
+        action: h.action,
+        changedAt: h.changed_at,
+        changedBy: h.changed_by,
+        snapshot: h.snapshot,
+        diff: h.diff,
+      }))
+    );
+  } catch (err: any) {
+    return void res.status(500).json({ error: err.message });
+  }
+});
+
 // ── GET ONE ───────────────────────────────────────────────────────────────
 propertiesRouter.get("/:id", async (req, res) => {
   try {
@@ -257,9 +296,13 @@ propertiesRouter.get("/:id", async (req, res) => {
       .from("properties")
       .select(`*, regions!properties_region_id_fkey(name), property_types!properties_type_id_fkey(name)`)
       .eq("id", req.params.id)
-      .single();
+      .maybeSingle();
 
-    if (error || !data) return void res.status(404).json({ error: "Property not found" });
+    if (error) {
+      req.log.error({ err: error, propertyId: req.params.id }, "getProperty query error");
+      return void res.status(500).json({ error: "Unable to load property details" });
+    }
+    if (!data) return void res.status(404).json({ error: "Property not found" });
     res.json(mapRow(data));
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -301,6 +344,7 @@ propertiesRouter.patch("/:id", async (req, res) => {
       resourceLabel: data?.code,
       before,
       after: req.body,
+      ...auditActor(req),
     });
 
     res.json(mapRow(data));
@@ -330,6 +374,7 @@ propertiesRouter.delete("/:id", async (req, res) => {
       resourceType: "property",
       resourceId: req.params.id,
       resourceLabel: before?.code,
+      ...auditActor(req),
     });
 
     res.json({ success: true, id: req.params.id });
@@ -361,35 +406,11 @@ propertiesRouter.post("/:id/duplicate", async (req, res) => {
 
     if (error) throw error;
 
-    await logAudit({ action: "duplicate", resourceType: "property", resourceId: newId, resourceLabel: newCode });
+    await logAudit({ action: "duplicate", resourceType: "property", resourceId: newId, resourceLabel: newCode, ...auditActor(req) });
 
-    res.status(201).json(mapRow(data));
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
+    const created = mapRow(data);
 
-// ── HISTORY ───────────────────────────────────────────────────────────────
-propertiesRouter.get("/:id/history", async (req, res) => {
-  try {
-    const { data, error } = await supabaseAdmin
-      .from("property_history")
-      .select()
-      .eq("property_id", req.params.id)
-      .order("changed_at", { ascending: false });
-
-    if (error) throw error;
-    res.json(
-      (data ?? []).map((h) => ({
-        id: h.id,
-        propertyId: h.property_id,
-        action: h.action,
-        changedAt: h.changed_at,
-        changedBy: h.changed_by,
-        snapshot: h.snapshot,
-        diff: h.diff,
-      }))
-    );
+    res.status(201).json(created);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

@@ -72,7 +72,10 @@ async function runBulk(ids: string[], operation: string, updates?: Record<string
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ids, operation, updates }),
   });
-  if (!res.ok) throw new Error("فشلت العملية الجماعية");
+  if (!res.ok) {
+    const payload = await res.json().catch(() => null);
+    throw new Error(payload?.error || `فشلت العملية الجماعية (${res.status})`);
+  }
   return res.json();
 }
 
@@ -257,10 +260,14 @@ export default function PropertiesList() {
     try {
       await runBulk(ids, operation);
       setSelected(new Set());
-      refetch();
+      await refetch();
       toast({ title: language === "ar" ? "تم تنفيذ العملية الجماعية" : "Bulk operation completed" });
     } catch (error: any) {
-      toast({ title: language === "ar" ? "تعذر تنفيذ العملية" : "Could not complete the operation", description: error.message, variant: "destructive" });
+      toast({
+        title: language === "ar" ? "تعذر تنفيذ العملية" : "Could not complete the operation",
+        description: error instanceof Error ? error.message : "حدث خطأ غير متوقع",
+        variant: "destructive",
+      });
     } finally {
       setBulkLoading(false);
     }
@@ -638,8 +645,16 @@ export default function PropertiesList() {
                                 className="text-destructive focus:text-destructive"
                                 onClick={async () => {
                                   if (confirm("حذف هذا العقار؟")) {
-                                    await runBulk([p.id], "delete");
-                                    refetch();
+                                    try {
+                                      await runBulk([p.id], "delete");
+                                      await refetch();
+                                    } catch (error: any) {
+                                      toast({
+                                        title: "تعذر حذف العقار",
+                                        description: error instanceof Error ? error.message : "حدث خطأ غير متوقع",
+                                        variant: "destructive",
+                                      });
+                                    }
                                   }
                                 }}
                               >

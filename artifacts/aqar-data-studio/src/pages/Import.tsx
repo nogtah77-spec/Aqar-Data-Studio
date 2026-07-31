@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useListRegions, useListPropertyTypes } from "@workspace/api-client-react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -337,6 +338,8 @@ export default function Import() {
   const queryClient = useQueryClient();
   const currency = useCurrency();
   const { toast } = useToast();
+  const { data: regionsData } = useListRegions({ query: { queryKey: ["regions"] } });
+  const { data: typesData } = useListPropertyTypes({ query: { queryKey: ["property-types"] } });
   const [step, setStep] = useState<Step>("upload");
   const [importMode, setImportMode] = useState<ImportMode>("manual");
 
@@ -390,7 +393,7 @@ export default function Import() {
       // Try smart CSV parse
       try {
         const text = await file.text();
-        const result = parseDelimitedText(text);
+        const result = parseDelimitedText(text, regionsData ?? [], typesData ?? []);
         if (result.items.length > 0) {
           setSmartItems(result.items);
           setSmartSheets(result.sheets);

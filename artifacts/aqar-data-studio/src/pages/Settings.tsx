@@ -2,11 +2,13 @@ import { useGetSettings, useUpdateSettings } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { CURRENCIES, DEFAULT_CURRENCY, getCurrencyCountry, getCurrencyLabel, getCurrencyOption } from "@/lib/currencies";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Check, ChevronsUpDown, Save, Loader2, Settings as SettingsIcon } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { useState, useEffect } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -37,18 +39,22 @@ export default function Settings() {
 
   const [formData, setFormData] = useState({
     companyName: "",
-     currency: DEFAULT_CURRENCY,
+    currency: DEFAULT_CURRENCY,
     language: "ar",
-    dateFormat: "DD/MM/YYYY"
+    dateFormat: "DD/MM/YYYY",
+    publicListingsEnabled: true,
+    requireAuthForListings: false,
   });
 
   useEffect(() => {
     if (settings) {
       setFormData({
         companyName: settings.companyName || "",
-         currency: settings.currency || DEFAULT_CURRENCY,
+        currency: settings.currency || DEFAULT_CURRENCY,
         language: settings.language || "ar",
-        dateFormat: settings.dateFormat || "DD/MM/YYYY"
+        dateFormat: settings.dateFormat || "DD/MM/YYYY",
+        publicListingsEnabled: settings.publicListingsEnabled ?? true,
+        requireAuthForListings: settings.requireAuthForListings ?? false,
       });
     }
   }, [settings]);
@@ -177,6 +183,50 @@ export default function Settings() {
                   <option value="YYYY-MM-DD">YYYY-MM-DD</option>
                 </select>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>{language === "ar" ? "إعدادات العرض العام" : "Public listing settings"}</CardTitle>
+            <CardDescription>
+              {language === "ar"
+                ? "تحكم في ظهور القوائم العامة ومتطلبات تسجيل الدخول."
+                : "Control public listings and their sign-in requirements."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between gap-4 rounded-lg border p-4">
+              <div>
+                <Label htmlFor="public-listings">
+                  {language === "ar" ? "تفعيل القوائم العامة" : "Enable public listings"}
+                </Label>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {language === "ar" ? "السماح بعرض العقارات في الواجهات العامة." : "Allow properties to appear in public views."}
+                </p>
+              </div>
+              <Switch
+                id="public-listings"
+                checked={formData.publicListingsEnabled}
+                onCheckedChange={(checked) => setFormData({ ...formData, publicListingsEnabled: checked })}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-4 rounded-lg border p-4">
+              <div>
+                <Label htmlFor="require-auth-listings">
+                  {language === "ar" ? "تطلب القوائم العامة تسجيل الدخول" : "Require sign-in for public listings"}
+                </Label>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {language === "ar" ? "لا يؤثر هذا الخيار إذا كانت القوائم العامة معطلة." : "This has no effect while public listings are disabled."}
+                </p>
+              </div>
+              <Switch
+                id="require-auth-listings"
+                checked={formData.requireAuthForListings}
+                disabled={!formData.publicListingsEnabled}
+                onCheckedChange={(checked) => setFormData({ ...formData, requireAuthForListings: checked })}
+              />
             </div>
           </CardContent>
         </Card>

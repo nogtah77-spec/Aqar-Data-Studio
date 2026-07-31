@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { supabaseAdmin } from "../lib/supabase.js";
-import { logAudit } from "../lib/audit.js";
+import { logAudit, auditActor } from "../lib/audit.js";
 import { requireRole } from "../middleware/auth.js";
 
 export const settingsRouter = Router();
@@ -61,7 +61,7 @@ settingsRouter.patch("/", requireRole("admin"), async (req, res) => {
 
     if (error) throw error;
 
-    await logAudit({ action: "update", resourceType: "settings" });
+    await logAudit({ action: "update", resourceType: "settings", before: null, after: updates, ...auditActor(req) });
 
     res.json({
       companyName: data.company_name ?? "Aqar Data Studio",

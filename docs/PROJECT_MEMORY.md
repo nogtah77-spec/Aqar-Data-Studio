@@ -43,20 +43,19 @@ Durable architectural decisions are recorded in [`DECISIONS.md`](DECISIONS.md).
 - The repository contains the four agent-reference files:
   `AGENTS.md`, `docs/PROJECT_MEMORY.md`, `.github/copilot-instructions.md`, and
   `replit.md`.
-- The current implementation phase is the production-grade smart property analyzer and
-  professional property-description generator, alongside the expanded currency catalog.
-  Import/export improvements and performance remain later phases.
+- The current implementation phase includes stabilization of property detail navigation,
+  bulk operations, import/export, audit identity, settings, and Replit preview behavior.
 - Never force-push or overwrite remote work.
 
 ## Verification state
 
 - `pnpm run typecheck` passes after the stabilization fixes.
-- The workspace build passes with temporary command-line values
-  (`PORT=4173 BASE_PATH=/`). The unmodified build configuration for
-  `mockup-sandbox` requires those values even during a build, so plain `pnpm build`
-  stops before compilation when they are absent.
+- `pnpm build` passes for the API and both web artifacts; Vite reports only existing
+  source-map and chunk-size warnings.
 - API health returns `200`; protected API routes return `401` without a session.
-- The frontend login screen renders without browser console errors in the final preview.
+- The API and primary frontend workflows restart cleanly; `/api/healthz` and the frontend
+  root both return HTTP 200. Screenshot capture is unavailable because the current
+  workspace artifact registry does not list the existing artifact directory.
 - Vercel serverless routing now has explicit handlers for the protected nested routes used
   by reference-table activation and smart text parsing; local handler checks reach Express
   and return JSON auth responses instead of a platform `404 NOT_FOUND`.
@@ -70,14 +69,19 @@ Durable architectural decisions are recorded in [`DECISIONS.md`](DECISIONS.md).
 - Search and property-list query input now handles invalid page/limit values safely and
   escapes special characters before building PostgREST `or` filters.
 - Audit-log and dashboard activity pagination now enforce valid minimum limits.
-- Imports preserve a missing region as `null` instead of an invalid empty foreign key.
+- Imports preserve a missing region as `null` instead of an invalid empty foreign key and
+  support BOM/NUL-safe CSV, TSV, TXT, semicolon, and pipe-delimited input.
 - Import success invalidates property, dashboard, and search query caches without a full
   page refresh.
 - Search displays a recoverable error state instead of presenting a false empty result.
-- HTML-based Excel/PDF export escapes generated cell and header content.
+- HTML-based Excel/PDF export escapes generated cell and header content, and export
+  requests are recorded with the acting user's identity.
 - User activation/deactivation now updates the Supabase Auth ban state and returns the
   persisted status.
 - Lookup-option create/update/delete operations now write audit records.
+- Property, reference-table, user, settings, import, export, and bulk-operation audit
+  records now receive the authenticated user's name when available.
+- Settings expose the existing public-listing and sign-in toggles without a schema change.
 - The smart analyzer now normalizes Arabic/Persian numerals, extracts Arabic and English
   property facts, recognizes compact area/price/floor formats, spelling variations,
   mixed-language labels, property codes, projects, cities, receptions, building floors,
@@ -121,7 +125,7 @@ Durable architectural decisions are recorded in [`DECISIONS.md`](DECISIONS.md).
 
 ## Current next steps
 
-1. Improve import/export behavior and UX.
+1. Complete authenticated end-to-end verification with existing admin, agent, and viewer sessions.
 2. Improve performance without architectural changes.
 
 ## Current constraints

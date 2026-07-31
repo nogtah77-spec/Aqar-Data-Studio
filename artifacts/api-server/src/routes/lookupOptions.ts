@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { supabaseAdmin } from "../lib/supabase.js";
-import { generateId, logAudit } from "../lib/audit.js";
+import { generateId, logAudit, auditActor } from "../lib/audit.js";
 import { requireRole } from "../middleware/auth.js";
 
 export const lookupOptionsRouter = Router();
@@ -59,6 +59,7 @@ lookupOptionsRouter.post("/", async (req, res) => {
       resourceId: data.id,
       resourceLabel: data.label,
       after: data,
+      ...auditActor(req),
     });
     res.status(201).json({ id: data.id, category: data.category, value: data.value, label: data.label, active: data.active, sortOrder: data.sort_order });
   } catch (err: any) {
@@ -102,6 +103,7 @@ lookupOptionsRouter.patch("/:id", async (req, res) => {
       resourceLabel: data.label,
       before,
       after: data,
+      ...auditActor(req),
     });
     return void res.json({
       id: data.id,
@@ -124,6 +126,7 @@ lookupOptionsRouter.delete("/:id", async (req, res) => {
       action: "delete",
       resourceType: "lookup_option",
       resourceId: req.params.id,
+      ...auditActor(req),
     });
     res.json({ success: true, id: req.params.id });
   } catch (err: any) {
